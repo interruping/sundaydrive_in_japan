@@ -2,6 +2,14 @@
 
 한국 운전자를 위한 일본 운전 상황 퀴즈. 모든 문제에 그림이 있고, 두 행동 중 하나를 고릅니다. 결과에서 틀린 문제를 다시 풀거나 맞은 문제의 그림·정답·해설을 다시 볼 수 있습니다.
 
+[사이트 열기](https://interruping.github.io/sundaydrive_in_japan/)
+
+## GitHub Pages 배포
+
+`main`에 푸시하면 [배포 워크플로](.github/workflows/pages.yml)가 문제 그림을 생성하고 JavaScript 문법·출제·채점·저장·그림 검사를 실행합니다. 검사가 통과하면 `dist/`만 GitHub Pages에 배포합니다. 별도 배포 토큰은 필요하지 않습니다.
+
+배포 상태와 수동 재실행은 저장소의 **Actions → Deploy GitHub Pages**에서 확인할 수 있습니다. Pages의 게시 소스는 **GitHub Actions**입니다.
+
 ## 실행
 
 Node.js 22 이상. 앱 실행에 외부 패키지 설치나 빌드가 필요하지 않습니다.
