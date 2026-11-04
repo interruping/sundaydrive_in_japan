@@ -24,7 +24,11 @@ export const CATEGORIES = {
 
 const q = (id, category, prompt, choices, answer, explanation, source, scene) => ({
   id, category, prompt, choices, answer, explanation, source, scene,
-  description: `${prompt} ${scene.label || ''}${scene.extraLabel ? `. ${scene.extraLabel}` : ''}`,
+  description: [prompt, scene.label, scene.extraLabel,
+    scene.signal && ({ red: '빨간 원형 신호', green: '초록 원형 신호', yellow: '노란 원형 신호', 'flash-red': '깜빡이는 빨간 신호', 'flash-yellow': '깜빡이는 노란 신호' })[scene.signal],
+    scene.arrows?.length && `${scene.amberArrow ? '노란' : '녹색'} 화살표: ${scene.arrows.map(direction => ({ left: '좌회전', right: '우회전', straight: '직진' })[direction]).join(', ')}`,
+    scene.nav && `내비 경로: ${{ left: '좌회전', right: '우회전', straight: '직진' }[scene.route]}`,
+  ].filter(Boolean).join('. '),
 });
 
 export const QUESTIONS = [
@@ -103,7 +107,7 @@ export const QUESTIONS = [
     { kind: 'lane', feature: 'center-yellow', label: '같은 방향 두 차로 사이 노란 실선', extraLabel: '두 차로 모두 같은 방향' }),
   q('turn-07', 'turns', '좌회전하려는데 왼쪽에 자전거가 와요.',
     ['회전을 멈추고 자전거를 확인해요', '자전거 앞을 가로질러 돌아요'], 0,
-    '좌회전하며 왼쪽의 자전거를 끼워 넣지 않도록 주의해요. 거울과 직접 확인으로 안전을 확보한 뒤 돌아요.', 'rules',
+    '좌회전하며 자전거의 진로를 가로막거나 부딪히지 않도록 주의해요. 거울과 직접 확인으로 안전을 확보한 뒤 돌아요.', 'rules',
     { kind: 'junction', route: 'left', cyclist: true, label: '왼쪽 뒤에서 오는 자전거' }),
   q('turn-08', 'turns', '초록불에 우회전하려는데 횡단 중인 사람이 있어요.',
     ['경적을 울리고 먼저 돌아요', '횡단하는 사람이 먼저 가도록 기다려요'], 1,
@@ -130,10 +134,10 @@ export const QUESTIONS = [
     ['횡단보도 앞에 멈춰 양보해요', '아직 안 건너니 먼저 지나가요'], 0,
     '신호 없는 횡단보도에서 건너려는 사람이 있다면 정지해서 양보해요. 발을 내딛기 전이어도 마찬가지예요.', 'crossing',
     { kind: 'crossing', pedestrian: true, feature: 'pedestrian-waiting', label: '신호 없는 횡단보도 · 건너려는 사람' }),
-  q('pedestrian-04', 'pedestrians', '횡단보도 앞 옆 차로에 차가 멈춰 있어요.',
+  q('pedestrian-04', 'pedestrians', '신호 없는 횡단보도 앞에 옆 차가 멈춰 있어요.',
     ['옆 차를 지나치기 전에 일시정지해요', '내 차로가 비었으니 계속 가요'], 0,
     '횡단보도 앞에 멈춘 차를 옆으로 지나 그 앞으로 나가기 전에는 일시정지해요. 가려진 보행자가 있을 수 있어요.', 'crossing',
-    { kind: 'crossing', feature: 'overtaking-crosswalk', label: '횡단보도 앞 정지 차량' }),
+    { kind: 'crossing', feature: 'overtaking-crosswalk', label: '신호 없는 횡단보도 앞 정지 차량' }),
   q('pedestrian-05', 'pedestrians', '사람이 횡단보도를 건너고 있어요.',
     ['사람 뒤로 빠르게 지나가요', '진로를 방해하지 않게 멈춰 기다려요'], 1,
     '횡단 중인 보행자가 우선이에요. 횡단보도 앞에 멈춰 안전하게 건널 수 있도록 양보해요.', 'crossing',
@@ -199,7 +203,7 @@ export const QUESTIONS = [
   q('highway-02', 'highway', '가속차로에서 본선으로 합류하려 해요.',
     ['본선 흐름에 속도를 맞추고 안전하게 합류해요', '본선 차량이 모두 멈출 때까지 기다려요'], 0,
     '가속차로를 이용해 본선 흐름에 속도를 맞추고, 방향지시등과 안전 확인 후 충분한 간격으로 합류해요.', 'merge',
-    { kind: 'highway', feature: 'merging', label: '가속차로 · 본선 흐름에 맞춰 합류' }),
+    { kind: 'highway', feature: 'merging', label: '가속차로에서 본선 합류 전' }),
   q('highway-03', 'highway', '고속도로 출구를 지나쳤어요.',
     ['갓길에서 조금만 후진해요', '계속 가서 다음 출구로 나가요'], 1,
     '고속도로에서는 후진하거나 유턴하지 않아요. 다음 IC로 진행한 뒤 안전하게 경로를 다시 잡아요.', 'exit',

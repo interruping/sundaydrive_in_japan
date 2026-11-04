@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#edf3ee">
+    <meta name="description" content="일본 운전, 그림으로 가볍게 예행연습. 20가지 상황을 풀고 헷갈린 교통규칙을 익혀요.">
+    <title>선데이 드라이브 · 일본 운전 연습</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <main id="main" tabindex="-1">
+      <div class="boot-message">선데이 드라이브를 준비하고 있어요.</div>
+    </main>
+    <dialog id="leave-dialog" aria-labelledby="leave-title">
+      <form method="dialog" class="dialog-content">
+        <span class="dialog-symbol" aria-hidden="true">Ⅱ</span>
+        <h2 id="leave-title">잠깐 쉬어 갈까요?</h2>
+        <p>지금까지 푼 내용은 저장돼요.<br>돌아오면 이어서 풀 수 있어요.</p>
+        <div class="dialog-actions">
+          <button class="button button-secondary" value="stay" autofocus>계속 풀기</button>
+          <button class="button" value="leave">홈으로</button>
+        </div>
+      </form>
+    </dialog>
+    <noscript>퀴즈를 풀려면 브라우저에서 JavaScript를 켜 주세요.</noscript>
+  </body>
+</html>
