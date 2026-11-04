@@ -49,6 +49,8 @@ test('lane arrows belong to actual lanes leading into a real intersection', asyn
       assert.ok(svg.includes(`data-lane="${side}" data-lane-directions="${q.scene.laneDirections[index].join(',')}"`), q.id);
     }
     assert.ok(svg.includes(`data-boundary="${q.scene.boundary}"`), q.id);
+    assert.ok(svg.includes('data-lane="opposing" data-travel-direction="toward-viewer"'), q.id);
+    assert.ok(svg.includes('흰 중앙선'), q.id);
   }
 });
 
