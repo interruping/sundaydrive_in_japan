@@ -1,4 +1,5 @@
 import { heroArt } from './art.js';
+import { circularArrows } from './symbols.js';
 import { CATEGORIES, QUESTION_BY_ID, SOURCES } from './questions.js';
 import { STORAGE_KEY, EXAM_LENGTH, PASS_SCORE, createExam, createReview, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
 
@@ -11,7 +12,7 @@ const icon = (name, size = 24) => {
     back: '<path d="M19 12H5m6-6-6 6 6 6"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
     close: '<path d="m6 6 12 12M18 6 6 18"/>',
-    refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 7a8 8 0 0 1 13-1L20 8M4 16l1.5 2a8 8 0 0 0 13-1"/>',
+    refresh: circularArrows(),
     book: '<path d="M12 6v15M3 4c3-1 6 0 9 2 3-2 6-3 9-2v14c-3-1-6 0-9 2-3-2-6-3-9-2Z"/>',
     external: '<path d="M14 4h6v6m0-6-10 10M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/>',
   };
