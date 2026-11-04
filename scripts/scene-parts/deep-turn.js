@@ -45,8 +45,8 @@ export function deepTurnScene(s,description='') {
   ${badge('A',150,555)}${badge('B',217,285)}
   ${arrow(190,612,0,C.white,.6)}${arrow(226,612,0,C.white,.6)}
   <path d="M262 631v-13q0-7 7-7h7m-6-6 6 6-6 6" fill="none" stroke="${C.white}" stroke-width="4" stroke-linecap="round"/>
-  ${text(65,590,'진입 전',18,'text-anchor="middle"')}${text(65,614,'정지선 A',21,'text-anchor="middle"')}
-  ${line('M110 592L140 560',C.ink,1.5)}
+  ${text(65,520,'진입 전',18,'text-anchor="middle"')}${text(65,544,'정지선 A',21,'text-anchor="middle"')}
+  ${line('M110 530L140 548',C.ink,1.5)}
   <rect x="22" y="215" width="167" height="52" rx="9" fill="${C.white}"/>${text(105,237,'교차로 안쪽',20,'text-anchor="middle"')}${text(105,259,'우회전 대기 B',22,'text-anchor="middle"')}${line('M189 252L209 275',C.ink,1.5)}
   </g>`;
   if (s.waitingQueue) {
@@ -59,7 +59,7 @@ export function deepTurnScene(s,description='') {
     else out+=`<g data-other-route="straight">${line('M300 166V253','#4f8ba1',4,'stroke-dasharray="8 6"')}${arrow(300,246,180,'#4f8ba1',.5)}</g>`;
   }
   if(s.straightMoving){out+=car(226,465,0,'adjacent')+tag(93,438,'직진 차',211,465)+line('M218 493v11m8-9v14m8-16v11','#6d9484',2.5);}
-  if(s.adjacentStopped){out+=car(226,593,0,'adjacent')+tag(120,625,'직진 차',211,602);}
+  if(s.adjacentStopped){out+=car(226,593,0,'adjacent')+tag(100,625,'직진 차',211,602);}
   if(s.exitBlocked){out+=car(493,207,90,'ahead')+car(547,207,90,'ahead')+car(601,207,90,'ahead')+tag(533,359,'출구 정체',545,230);}
   if(s.pedestrian){
     out+=`<g data-crosswalk="turn-exit">${Array.from({length:7},(_,i)=>`<rect x="475" y="${168+i*19}" width="30" height="11" fill="${C.white}"/>`).join('')}</g><g data-pedestrian="crossing" transform="translate(489 200)"><circle cy="-14" r="6" fill="#efc598"/><path d="M-5-6h10v17H-5Z" fill="${C.green}"/><path d="M-5 8l-5 15m15-15 5 15M-5-3l-9 10M5-3l9 10" stroke="${C.ink}" stroke-width="4" stroke-linecap="round"/></g>`;
