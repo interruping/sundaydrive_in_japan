@@ -1,5 +1,8 @@
 // Original scenario questions, checked against the sources below on 2026-11-04.
-export const BANK_VERSION = '2026-11-04.4';
+export const BANK_VERSION = '2026-11-04.5';
+// This revision clarifies lane-03 without changing any question IDs or answer
+// positions, so an in-progress exam from the preceding revision remains valid.
+export const COMPATIBLE_BANK_VERSIONS = ['2026-11-04.4'];
 export const SOURCES = {
   signals: { name: '일본 경찰청 · 신호와 도로표지', url: 'https://www.npa.go.jp/english/bureau/traffic/traffic-light_english.pdf' },
   rules: { name: '일본 경찰청 · 교통 안전 교칙', url: 'https://www.npa.go.jp/bureau/traffic/20241113kyousoku.pdf' },
@@ -164,9 +167,9 @@ export const QUESTIONS = [
   q('lane-02', 'lanes', '내비는 직진. 나는 우회전 전용 차로에 있어요.',
     ['내비대로 교차로를 직진해요', '우회전한 뒤 경로를 다시 잡아요'], 1,
     '내 차로의 진행 방향을 따라요. 차로 변경 금지선이 시작된 이 위치에서는 직진 차로로 무리하게 옮기지 않아요.', 'guide', lane({ myLane: 'right', route: 'straight' })),
-  q('lane-03', 'lanes', '오른쪽 신호가 켜졌지만, 내 차로 표시는 직진이에요.',
-    ['내 직진 신호를 기다려요', '우회전 신호가 켜졌으니 여기서 돌아요'], 0,
-    '우회전 화살표가 켜져도 직진 전용 차로에서 우회전할 수는 없어요. 지금 직진 신호는 빨강이므로 기다려요.', 'guide', lane({ signal: 'red', arrows: ['right'], arrowSlots: ['left', 'straight', 'right'] })),
+  q('lane-03', 'lanes', '직진·우회전 겸용 차로예요. 내비대로 직진할까요?',
+    ['직진 신호를 기다려요', '겸용 차로이니 지금 직진해요'], 0,
+    '차로는 직진도 허용하지만, 지금 켜진 신호는 우회전만 허용해요. 내비의 직진 경로를 따르려면 직진 신호를 기다려요.', ['guide', 'signals'], lane({ laneDirections: [['straight', 'right'], ['right']], route: 'straight', signal: 'red', arrows: ['right'], arrowSlots: ['left', 'straight', 'right'] })),
   q('lane-04', 'lanes', '내 차로에 직진·우회전 표시가 함께 있어요.',
     ['직진 표시가 있으니 우회전은 못 해요', '오른쪽 신호에 맞춰 우회전해요'], 1,
     '내 차로가 직진과 우회전을 모두 허용해요. 오른쪽 녹색 화살표도 켜졌으니 안전을 확인하고 우회전할 수 있어요.', 'guide', lane({ laneDirections: [['straight', 'right'], ['right']], signal: 'red', arrows: ['right'], arrowSlots: ['left', 'straight', 'right'] })),

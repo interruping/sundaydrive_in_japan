@@ -95,6 +95,17 @@ test('reload restores the exact in-progress question, choice order, and revealed
   assert.deepEqual(restoreState(JSON.stringify(finished)), finished);
 });
 
+test('the lane scenario clarification preserves a preceding-version exam in progress', () => {
+  let attempt = createExam();
+  for (let index = 0; index < 12; index++) attempt = nextQuestion(answerCurrent(attempt, QUESTION_BY_ID.get(attempt.items[index].id).answer));
+  attempt = answerCurrent(attempt, 0);
+  const current = { ...freshState(), screen: 'quiz', attempt };
+  const previous = { ...current, bankVersion: '2026-11-04.4' };
+  assert.deepEqual(restoreState(JSON.stringify(previous)), current);
+  assert.equal(current.attempt.index, 12);
+  assert.equal(current.attempt.items[12].answer, 0);
+});
+
 test('correct-answer browsing keeps original order, chosen answers, and the exam score', () => {
   const exam = complete(createExam(), 18);
   const original = JSON.stringify(exam);

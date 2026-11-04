@@ -1,4 +1,4 @@
-import { BANK_VERSION, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID } from './questions.js';
+import { BANK_VERSION, COMPATIBLE_BANK_VERSIONS, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID } from './questions.js';
 
 export const EXAM_LENGTH = 20;
 export const PASS_SCORE = 90;
@@ -113,7 +113,7 @@ export function isValidAttempt(attempt) {
 export function restoreState(raw) {
   try {
     const state = JSON.parse(raw);
-    if (!state || state.version !== 1 || state.bankVersion !== BANK_VERSION) return freshState();
+    if (!state || state.version !== 1 || (state.bankVersion !== BANK_VERSION && !COMPATIBLE_BANK_VERSIONS.includes(state.bankVersion))) return freshState();
     if (!['home', 'quiz', 'result', 'correct-review'].includes(state.screen)) return freshState();
     if (state.attempt !== null && !isValidAttempt(state.attempt)) return freshState();
     if (state.lastExam !== null && (!isValidAttempt(state.lastExam) || state.lastExam.mode !== 'exam' || state.lastExam.index !== state.lastExam.items.length)) return freshState();
