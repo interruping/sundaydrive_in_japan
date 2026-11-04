@@ -1,8 +1,22 @@
-import { BANK_VERSION, CATEGORIES, QUESTIONS, QUESTION_BY_ID } from './questions.js';
+import { BANK_VERSION, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID } from './questions.js';
 
 export const EXAM_LENGTH = 20;
 export const PASS_SCORE = 90;
 export const STORAGE_KEY = 'sunday-drive:progress';
+
+// Core confusions are covered in every exam, not left to chance.
+export const REQUIRED_TOPICS = [
+  { category: 'signals', count: 2, matches: q => q.scene.arrows?.length >= 2 },
+  { category: 'turns', count: 1, matches: q => q.scene.feature === 'offset-stop-lines' },
+  { category: 'turns', count: 1, matches: q => q.scene.feature === 'waiting-marking' },
+  { category: 'entry', count: 1, matches: q => ['entry-01', 'entry-02'].includes(q.id) },
+  { category: 'entry', count: 1, matches: q => q.scene.sign === 'no-crossing' },
+  { category: 'lanes', count: 1, matches: q => q.scene.kind === 'lane-junction' },
+  { category: 'railway', count: 1, matches: q => q.scene.signalScope === 'crossing' },
+  { category: 'railway', count: 1, matches: q => !q.scene.signal },
+];
+
+const coversTopics = questions => REQUIRED_TOPICS.every(topic => questions.filter(q => q.category === topic.category && topic.matches(q)).length >= topic.count);
 
 export function shuffle(items, random = Math.random) {
   const copy = [...items];
@@ -22,13 +36,23 @@ function makeAttempt(questions, mode, random) {
 }
 
 export function createExam(previousIds = [], random = Math.random) {
-  const categories = shuffle(Object.keys(CATEGORIES), random);
-  const selected = categories.flatMap((category, index) =>
-    shuffle(QUESTIONS.filter(question => question.category === category), random).slice(0, index < 2 ? 4 : 3));
+  const selected = Object.entries(EXAM_QUOTAS).flatMap(([category, count]) => {
+    const pool = QUESTIONS.filter(question => question.category === category);
+    const chosen = [];
+    for (const topic of REQUIRED_TOPICS.filter(topic => topic.category === category)) {
+      const needed = topic.count - chosen.filter(topic.matches).length;
+      chosen.push(...shuffle(pool.filter(q => !chosen.includes(q) && topic.matches(q)), random).slice(0, Math.max(0, needed)));
+    }
+    return [...chosen, ...shuffle(pool.filter(q => !chosen.includes(q)), random).slice(0, count - chosen.length)];
+  });
   const previousSet = new Set(previousIds);
   if (selected.every(question => previousSet.has(question.id))) {
-    const replacement = QUESTIONS.find(question => question.category === selected[0].category && !previousSet.has(question.id));
-    if (replacement) selected[0] = replacement;
+    outer: for (let index = 0; index < selected.length; index++) {
+      for (const replacement of QUESTIONS.filter(q => q.category === selected[index].category && !previousSet.has(q.id))) {
+        const candidate = selected.map((q, i) => i === index ? replacement : q);
+        if (coversTopics(candidate)) { selected[index] = replacement; break outer; }
+      }
+    }
   }
   return makeAttempt(selected, 'exam', random);
 }

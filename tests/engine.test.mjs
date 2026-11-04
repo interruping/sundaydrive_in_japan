@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { QUESTIONS, QUESTION_BY_ID, CATEGORIES, SOURCES } from '../dist/questions.js';
-import { EXAM_LENGTH, createExam, createReview, answerCurrent, nextQuestion, scoreAttempt, isValidAttempt, freshState, restoreState } from '../dist/engine.js';
+import { QUESTIONS, QUESTION_BY_ID, CATEGORIES, SOURCES, EXAM_QUOTAS } from '../dist/questions.js';
+import { EXAM_LENGTH, REQUIRED_TOPICS, createExam, createReview, answerCurrent, nextQuestion, scoreAttempt, isValidAttempt, freshState, restoreState } from '../dist/engine.js';
 
 function complete(attempt, rightCount) {
   let result = attempt;
@@ -21,8 +21,8 @@ test('60 distinct scenarios each have a picture, two choices, explanation and an
     assert.equal(q.choices.length, 2);
     assert.notEqual(q.choices[0], q.choices[1]);
     assert.ok([0, 1].includes(q.answer));
-    assert.ok(q.scene.kind && q.scene.label && q.description && q.explanation);
-    assert.match(SOURCES[q.source].url, /^https:\/\/(www\.npa\.go\.jp|www\.police\.pref\.kanagawa\.jp|jaf\.or\.jp|jaf-training\.jp|english\.jaf\.or\.jp)\//);
+    assert.ok(q.scene.kind && q.description && q.explanation);
+    for (const key of q.sources) assert.match(SOURCES[key].url, /^https:\/\/(www\.npa\.go\.jp|www\.police\.pref\.[a-z]+\.(jp|lg\.jp)|www\.pref\.hiroshima\.lg\.jp|laws\.e-gov\.go\.jp|jaf\.or\.jp|jafmate\.jp)\//);
   }
   assert.ok(QUESTIONS.filter(q => q.scene.nav).length >= 8);
 });
@@ -37,10 +37,13 @@ test('exam draws 20 unique questions covering every category and shuffles answer
     assert.equal(new Set(exam.items.map(item => item.id)).size, 20);
     for (const category of Object.keys(CATEGORIES)) {
       const count = exam.items.filter(item => QUESTION_BY_ID.get(item.id).category === category).length;
-      assert.ok(count === 3 || count === 4);
+      assert.equal(count, EXAM_QUOTAS[category]);
     }
     exam.items.forEach(item => firstChoices.add(item.order[0]));
     questionSets.add(exam.items.map(item => item.id).sort().join(','));
+    for (const topic of REQUIRED_TOPICS) {
+      assert.ok(exam.items.map(item => QUESTION_BY_ID.get(item.id)).filter(q => q.category === topic.category && topic.matches(q)).length >= topic.count);
+    }
   }
   assert.equal(firstChoices.size, 2);
   assert.ok(questionSets.size > 95);
