@@ -47,7 +47,7 @@ try {
   await screenshot('home-mobile');
   await click('start');
   assert.equal(await page.locator('.choice:enabled').count(), 2);
-  assert.equal(await page.locator('.scene-frame svg[role="img"]').count(), 1);
+  assert.equal(await page.locator('.scene-frame img.scene-art').count(), 1);
   await page.keyboard.press('1');
   const answeredState = await state();
   assert.notEqual(answeredState.attempt.items[0].answer, null);
@@ -109,10 +109,14 @@ try {
     await page.reload();
     assert.equal(await page.locator('h1').textContent(), question.prompt);
     await assertNoOverflow();
-    assert.ok(await page.locator('.scene-art').getAttribute('aria-label'));
-    const xmlOkay = await page.locator('.scene-art').evaluate(svg => !new DOMParser().parseFromString(svg.outerHTML, 'image/svg+xml').querySelector('parsererror'));
-    assert.ok(xmlOkay, `Valid SVG: ${question.id}`);
-    if (['signal-02', 'signal-05', 'safety-01', 'turn-08', 'railway-02', 'highway-04'].includes(question.id)) await screenshot(`${question.id}-mobile`);
+    assert.ok(await page.locator('.scene-art').getAttribute('alt'));
+    const graphic = await page.locator('.scene-art').evaluate(async img => {
+      await img.decode();
+      const document = new DOMParser().parseFromString(await (await fetch(img.currentSrc)).text(), 'image/svg+xml');
+      return { valid: !document.querySelector('parsererror'), loaded: img.naturalWidth > 0, own: document.querySelectorAll('[data-vehicle-role="own"]').length, id: document.documentElement.getAttribute('data-question-id') };
+    });
+    assert.deepEqual(graphic, { valid: true, loaded: true, own: 1, id: question.id });
+    if (['signal-04', 'signal-10', 'turn-01', 'turn-05', 'entry-01', 'entry-03', 'lane-01', 'railway-04', 'priority-03'].includes(question.id)) await screenshot(`${question.id}-mobile`);
   }
   console.log('PASS all 60 illustrated scenarios at mobile size');
 
