@@ -1,0 +1,14 @@
+{
+  "name": "sundaydrive-in-japan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "그림으로 익히는 일본 운전 퀴즈",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs"
+  }
+}
