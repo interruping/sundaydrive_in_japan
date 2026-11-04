@@ -13,8 +13,26 @@ function house(x, y, w = 67, d = 46, h = 66, roof = '#456669') {
   return `<g>${path(`M${l[0]} ${l[1]}L${x} ${y}L${x} ${y - h}L${l[0]} ${l[1] - h}Z`, '#f6f1dd')}${path(`M${x} ${y}L${r[0]} ${r[1]}V${r[1] - h}L${x} ${y - h}Z`, '#dddcc6')}${path(`M${l[0] - 4} ${l[1] - h}L${b[0]} ${b[1] - h - 4}L${r[0] + 4} ${r[1] - h}L${x} ${y - h + 5}Z`, roof)}${path(`M${x - w + 13} ${y - w * .52 - h + 18}l17 9v20l-17 -9Z`, '#bed4cf')}${path(`M${x - 28} ${y - h + 5}l16 9v20l-16 -9Z`, '#bed4cf')}${path(`M${x + 12} ${y - h + 8}l17 -9v24l-17 9Z`, '#7b9f9c')}${path(`M${x - 26} ${y - 14}v-27l15 8v27Z`, '#8faaa1')}</g>`;
 }
 
-function car(x, y, rotation = 0, color = C.coral, scale = 1, emergency = false) {
-  return `<g transform="translate(${x} ${y}) rotate(${rotation}) scale(${scale})"><rect x="-20" y="-34" width="44" height="73" rx="14" fill="#173e38" opacity=".12"/><rect x="-22" y="-21" width="5" height="15" rx="2" fill="${C.ink}"/><rect x="17" y="-21" width="5" height="15" rx="2" fill="${C.ink}"/><rect x="-22" y="16" width="5" height="14" rx="2" fill="${C.ink}"/><rect x="17" y="16" width="5" height="14" rx="2" fill="${C.ink}"/><rect x="-19" y="-35" width="38" height="72" rx="12" fill="${color}"/><path d="M-14 -17q14 -7 28 0l-3 14h-22Z" fill="#355b59"/><path d="M-12 21h24l2 8q-14 4 -28 0Z" fill="#355b59"/><path d="M-15 1v14M15 1v14" stroke="#fffef7" stroke-opacity=".6" stroke-width="2"/><rect x="-14" y="-31" width="7" height="4" rx="2" fill="#fff6cf"/><rect x="7" y="-31" width="7" height="4" rx="2" fill="#fff6cf"/><rect x="-15" y="32" width="6" height="3" rx="1" fill="#c34e41"/><rect x="9" y="32" width="6" height="3" rx="1" fill="#c34e41"/>${emergency ? `<rect x="-14" y="3" width="28" height="7" rx="2" fill="${C.red}"/><path d="M-5 14H5M0 9v10" stroke="${C.red}" stroke-width="4"/>` : ''}</g>`;
+function car(x, y, rotation = 0, color = C.coral, scale = 1, emergency = false, role = '', annotation = {}) {
+  const vehicleRole = role || (emergency ? '구급차' : color === C.coral ? '내 차' : rotation === 180 ? '맞은편 차' : '앞차');
+  const semanticRole = ({ '내 차': 'own', '맞은편 차': 'oncoming', '앞차': 'ahead', '옆 차': 'adjacent', '본선 차량': 'mainline', '구급차': 'emergency', '뒤차': 'behind', '정차한 차': 'parked', '교차로 직진 차': 'crossing' })[vehicleRole] || 'ahead';
+  return `<g data-vehicle-role="${semanticRole}" data-car-x="${x}" data-car-y="${y}" data-car-role="${esc(vehicleRole)}" data-car-side="${annotation.side || (vehicleRole === '내 차' ? 'left' : 'right')}" data-car-dy="${annotation.dy || 0}" transform="translate(${x} ${y}) rotate(${rotation}) scale(${scale})"><rect x="-20" y="-34" width="44" height="73" rx="14" fill="#173e38" opacity=".12"/><rect x="-22" y="-21" width="5" height="15" rx="2" fill="${C.ink}"/><rect x="17" y="-21" width="5" height="15" rx="2" fill="${C.ink}"/><rect x="-22" y="16" width="5" height="14" rx="2" fill="${C.ink}"/><rect x="17" y="16" width="5" height="14" rx="2" fill="${C.ink}"/><rect x="-19" y="-35" width="38" height="72" rx="12" fill="${color}"/><path d="M-14 -17q14 -7 28 0l-3 14h-22Z" fill="#355b59"/><path d="M-12 21h24l2 8q-14 4 -28 0Z" fill="#355b59"/><path d="M-15 1v14M15 1v14" stroke="#fffef7" stroke-opacity=".6" stroke-width="2"/><rect x="-14" y="-31" width="7" height="4" rx="2" fill="#fff6cf"/><rect x="7" y="-31" width="7" height="4" rx="2" fill="#fff6cf"/><rect x="-15" y="32" width="6" height="3" rx="1" fill="#c34e41"/><rect x="9" y="32" width="6" height="3" rx="1" fill="#c34e41"/>${emergency ? `<rect x="-14" y="3" width="28" height="7" rx="2" fill="${C.red}"/><path d="M-5 14H5M0 9v10" stroke="${C.red}" stroke-width="4"/>` : ''}</g>`;
+}
+
+function vehicleCallouts(art) {
+  const seen = new Set();
+  return [...art.matchAll(/data-car-x="([\d.-]+)" data-car-y="([\d.-]+)" data-car-role="([^"]+)" data-car-side="([^"]+)" data-car-dy="([\d.-]+)"/g)].map(([, rawX, rawY, role, side, rawDy]) => {
+    const key = `${rawX},${rawY},${role}`;
+    if (seen.has(key)) return '';
+    seen.add(key);
+    const x = Number(rawX), y = Number(rawY), left = side === 'left';
+    const width = [...role].reduce((n, c) => n + (c === ' ' ? 8 : 22), 20);
+    const boxX = left ? Math.max(7, x - 53 - width) : Math.min(553 - width, x + 52);
+    const boxY = Math.max(5, Math.min(350, y - 18 + Number(rawDy)));
+    const endX = left ? x - 24 : x + 24;
+    const startX = left ? boxX + width : boxX;
+    return `<g class="vehicle-callout"><path d="M${startX} ${boxY + 18}L${endX} ${y}" stroke="${C.ink}" stroke-width="2.5"/><circle cx="${endX}" cy="${y}" r="3" fill="${C.ink}"/><rect x="${boxX}" y="${boxY}" width="${width}" height="36" rx="8" fill="${C.white}" stroke="#bacdbd" stroke-width="1.5"/>${txt(boxX + width / 2, boxY + 26, role, 22, C.ink, 'text-anchor="middle"')}</g>`;
+  }).join('');
 }
 
 function person(x, y, color = C.teal, scale = 1) {
@@ -40,6 +58,10 @@ function sign(type, x = 105, y = 85, scale = 1) {
     symbol = `<circle r="38" fill="${C.red}"/><rect x="-26" y="-7" width="52" height="14" rx="2" fill="${C.white}"/>`;
   } else if (type === 'one-way') {
     symbol = `<rect x="-26" y="-50" width="52" height="100" rx="3" fill="#4e85ab"/><path d="M-7 33V-7h-12L0 -33 19 -7H7v40Z" fill="${C.white}"/>`;
+  } else if (type === 'one-way-left') {
+    symbol = `<rect x="-53" y="-29" width="106" height="58" rx="3" fill="#3975a6"/><path d="M34 -7H-8v-13L-36 0l28 20V7h42Z" fill="${C.white}"/>`;
+  } else if (type === 'left-allowed') {
+    symbol = `<rect x="-53" y="-29" width="106" height="58" rx="2" fill="${C.white}" stroke="#768e86" stroke-width="2"/><path d="M34 -7H-8v-13L-36 0l28 20V7h42Z" fill="#3975a6"/>`;
   } else if (type === 'no-parking' || type === 'no-stopping') {
     symbol = `<circle r="38" fill="#4e85ab" stroke="${C.red}" stroke-width="9"/><path d="M-27 -27l54 54${type === 'no-stopping' ? 'M27 -27l-54 54' : ''}" stroke="${C.red}" stroke-width="8"/>`;
   } else if (type === 'no-uturn') {
@@ -47,46 +69,88 @@ function sign(type, x = 105, y = 85, scale = 1) {
   } else if (type === 'etc') {
     symbol = `<rect x="-53" y="-29" width="106" height="58" rx="6" fill="#756490"/>${txt(0, 8, 'ETC', 30, C.white, 'text-anchor="middle"')}`;
   }
-  return symbol ? `<g transform="translate(${x} ${y}) scale(${scale})"><path d="M0 30v56" stroke="#94a79b" stroke-width="7"/>${symbol}</g>` : '';
+  return symbol ? `<g data-sign="${type}" transform="translate(${x} ${y}) scale(${scale})"><path d="M0 30v56" stroke="#94a79b" stroke-width="7"/>${symbol}</g>` : '';
 }
 
 function trafficLight(s, x = 378, y = 54) {
   const names = ['green', 'yellow', 'red'];
-  const colors = [C.teal, C.yellow, C.red];
-  const directions = s.amberArrow ? [] : (s.arrows || []);
+  const colors = ['#82cf83', C.yellow, C.red];
+  const directions = s.amberArrow ? [] : (s.arrowSlots || s.arrows || []);
   const arrowCount = directions.length + (s.amberArrow ? 1 : 0);
   const lamp = (name, i) => `<circle cx="${27 + i * 47}" cy="27" r="18" fill="${s.signal === name || s.signal === `flash-${name}` ? colors[i] : '#6b7d70'}"/>${s.signal === `flash-${name}` ? `<g stroke="${colors[i]}" stroke-width="3" stroke-linecap="round"><path d="M${27 + i * 47} -14v-6M${12 + i * 47} -10l-4 -5M${42 + i * 47} -10l4 -5"/></g>` : ''}`;
-  return `<g transform="translate(${x} ${y})"><path d="M73 48v55" stroke="#819b88" stroke-width="7"/><rect width="148" height="54" rx="27" fill="${C.ink}"/>${names.map(lamp).join('')}${arrowCount ? `<rect x="${73 - arrowCount * 21}" y="63" width="${arrowCount * 42}" height="39" rx="12" fill="${C.ink}"/>${directions.map((d, i) => arrow(73 - arrowCount * 21 + 21 + i * 42, 83, d, '#a5d79d', .5)).join('')}${s.amberArrow ? arrow(73, 83, 'right', C.yellow, .5) : ''}` : ''}</g>`;
+  return `<g data-signal-type="road" transform="translate(${x} ${y})"><path d="M73 48v55" stroke="#819b88" stroke-width="7"/><rect width="148" height="54" rx="27" fill="${C.ink}"/>${names.map(lamp).join('')}${arrowCount ? `<rect x="${73 - arrowCount * 21}" y="63" width="${arrowCount * 42}" height="39" rx="12" fill="${C.ink}"/>${directions.map((d, i) => `<g data-arrow="${d}" data-lit="${Boolean(s.arrows?.includes(d))}">${arrow(73 - arrowCount * 21 + 21 + i * 42, 83, d, s.arrows?.includes(d) ? '#a5e593' : '#53695d', .5)}</g>`).join('')}${s.amberArrow ? `<g data-arrow="right" data-lit="true" data-arrow-color="amber">${arrow(73, 83, 'right', C.yellow, .5)}</g>` : ''}` : ''}</g>`;
 }
 
 function zebra(x = 211, y = 263, width = 138, height = 28) {
   return `<g fill="${C.white}">${Array.from({ length: Math.floor(width / 18) }, (_, i) => `<rect x="${x + i * 18}" y="${y}" width="10" height="${height}"/>`).join('')}</g>`;
 }
 
+function markingBadge(letter, x, y) {
+  return `<circle cx="${x}" cy="${y}" r="16" fill="${C.white}" stroke="${C.ink}" stroke-width="2"/>${txt(x, y + 7, letter, 22, C.ink, 'text-anchor="middle"')}`;
+}
+
+function offsetStopLines(s) {
+  const straight = s.myLane === 'straight';
+  const myX = straight ? 197 : 275;
+  const myY = s.position === 'at-stop' ? (straight ? 322 : 268) : 345;
+  let out = `<rect y="80" width="560" height="100" fill="${C.road}"/><rect x="158" width="234" height="390" fill="${C.road}"/><path d="M0 84h158V0M392 0v84h168M0 176h158v214M392 390V176h168" stroke="${C.white}" stroke-width="3" fill="none"/><path d="M314 0v74M314 185v205" stroke="${C.white}" stroke-width="3"/><path d="M236 0v74M236 185v205M0 130h150M400 130h160" stroke="${C.white}" stroke-width="3" stroke-dasharray="12 11"/>${arrow(197, 254, 'straight', C.white, .65)}<path d="M275 208v-18q0 -10 10 -10h12m-10 -9 10 9 -10 9" stroke="${C.white}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path data-marking="stop-line" data-line-id="A" data-lane="straight" d="M164 282h66" stroke="${C.white}" stroke-width="8"/><path data-marking="stop-line" data-line-id="B" data-lane="right" d="M242 228h66" stroke="${C.white}" stroke-width="8"/>${markingBadge('A', 139, 282)}${markingBadge('B', 332, 228)}<path d="M155 282h8M309 228h7" stroke="${C.ink}" stroke-width="2"/>`;
+  out += car(myX, myY, 0, C.coral, 1, false, '내 차', { side: straight ? 'left' : 'right', dy: straight ? 28 : 28 });
+  out += straight ? car(275, 268, 0, C.blue, 1, false, '옆 차', { side: 'right', dy: 18 }) : car(197, s.straightMoving ? 226 : 323, 0, C.blue, 1, false, '옆 차', { side: 'left', dy: s.straightMoving ? -18 : 0 });
+  if (s.straightMoving && !straight) out += `<path d="M187 277v10M197 280v14M207 277v10" stroke="#6a9686" stroke-width="3" stroke-linecap="round"/>`;
+  if (s.signal) out += trafficLight(s, 405, 21);
+  return out;
+}
+
+function waitingJunction(s) {
+  const inside = s.feature === 'right-turn-wait';
+  let out = `<rect y="132" width="560" height="126" fill="${C.road}"/><rect x="202" width="156" height="390" fill="${C.road}"/><path d="M0 136h202V0M358 0v136h202M0 254h202v136M358 390V254h202" stroke="${C.white}" stroke-width="3" fill="none"/><path d="M280 0v126M280 265v125M0 195h194M366 195h194" stroke="${C.white}" stroke-width="3" stroke-dasharray="14 13"/><path data-marking="stop-line" data-line-id="A" d="M209 284h64" stroke="${C.white}" stroke-width="8"/>${markingBadge('A', 187, 284)}<path data-marking="waiting-guide" data-line-id="B" d="M232 193h44" stroke="${C.white}" stroke-width="5" stroke-dasharray="8 6"/><path d="M257 189q0 -25 29 -25h65" stroke="${C.white}" stroke-width="2.5" stroke-dasharray="7 7" fill="none"/>${markingBadge('B', 218, 193)}`;
+  if (!inside) out += `<rect x="10" y="211" width="178" height="52" rx="9" fill="${C.white}"/>${txt(99, 233, '교차로 안', 20, C.ink, 'text-anchor="middle"')}${txt(99, 255, '대기 표시 B', 20, C.ink, 'text-anchor="middle"')}<path d="M188 226l47 -31" stroke="${C.ink}" stroke-width="2" fill="none"/>`;
+  out += car(inside ? 256 : 239, inside ? 232 : 349);
+  if (s.oncoming || s.otherRoute) {
+    out += car(320, 62, 180, C.blue, 1, false, '맞은편 차', { side: 'left', dy: -24 });
+    if (s.otherRoute === 'left') out += `<g data-other-route="left"><path d="M320 105v33q0 31 30 31h44" stroke="#4f8ba1" stroke-width="5" stroke-dasharray="8 6" fill="none"/>${arrow(392, 169, 'right', '#4f8ba1', .55)}<rect x="334" y="86" width="7" height="7" rx="2" fill="${C.yellow}"/></g>`;
+    else out += `<g data-other-route="straight"><path d="M320 107v47" stroke="#4f8ba1" stroke-width="5" stroke-dasharray="8 6"/>${arrow(320, 152, 'straight', '#4f8ba1', -.55)}</g>`;
+  }
+  if (s.pedestrian) out += `<g transform="translate(396 140) rotate(90)">${zebra(0, 0, 116, 28)}</g>${person(381, 177, C.teal, 1.15)}`;
+  if (s.blockedExit || s.blocked || s.exitBlocked) out += car(402, 166, 90, C.blue, 1, false, '앞차', { dy: 112 }) + car(492, 166, 90, '#81a394', 1, false, '앞차', { dy: 165 });
+  if (s.signal) out += trafficLight(s);
+  return out;
+}
+
+function leftAllowedJunction(s) {
+  return `<g data-junction="left-allowed"><rect y="85" width="560" height="160" fill="${C.road}"/><rect x="150" width="240" height="390" fill="${C.road}"/><path d="M0 89h150V0M390 0v89h170M0 241h150v149M390 390V241h170" fill="none" stroke="${C.white}" stroke-width="3"/><path d="M310 0v78M310 251v139M0 165h142M398 165h162" stroke="${C.white}" stroke-width="3"/><path d="M230 0v78M0 125h142M398 125h162M398 205h162" stroke="${C.white}" stroke-width="2.5" stroke-dasharray="12 11"/><path d="M230 390V264q0 -60 -59 -60H0" stroke="${C.white}" stroke-width="3" fill="none"/><path data-marking="stop-line" d="M238 288h65" stroke="${C.white}" stroke-width="8"/><path d="M190 285v-25q0 -16 -17 -16h-17m10 -9 -10 9 10 9" fill="none" stroke="${C.white}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>${car(190, 340, 0, C.coral, 1, false, '내 차', { side: 'right' })}${sign('left-allowed', 75, 283, .85)}${trafficLight(s, 400, 19)}${car(477, 184, -90, C.blue, .8, false, '교차로 직진 차', { side: 'right', dy: 113 })}</g>`;
+}
+
 function junction(s) {
+  if (s.sign === 'left-allowed' || s.feature === 'redleft-permitted') return leftAllowedJunction(s);
+  if (s.feature === 'offset-stop-lines') return offsetStopLines(s);
+  if (s.feature === 'waiting-marking' || s.feature === 'right-turn-wait') return waitingJunction(s);
   const crossing = s.kind === 'crossing' || s.pedestrian || s.cyclist || ['crosswalk', 'pedestrian-waiting', 'overtaking-crosswalk'].includes(s.feature);
   const turningPedestrian = s.pedestrian && ['left', 'right'].includes(s.route);
   const approachCrossing = crossing && !turningPedestrian;
   const passingStoppedCar = s.feature === 'overtaking-crosswalk';
   let out = `<rect x="0" y="132" width="560" height="126" fill="${C.road}"/><rect x="202" width="156" height="390" fill="${C.road}"/><path d="M0 136h202V0M358 0v136h202M0 254h202v136M358 390V254h202" stroke="${C.white}" stroke-width="3" fill="none"/><path d="M280 0v126M280 265v125M0 195h194M366 195h194" stroke="${C.white}" stroke-width="3" stroke-dasharray="14 13" fill="none"/>`;
-  out += house(101, 119, 56, 35, 49) + tree(455, 323, 25) + tree(494, 294, 17);
+  out += (s.feature === 'one-way-sign' ? '' : house(101, 119, 56, 35, 49)) + tree(455, 323, 25) + tree(494, 294, 17);
   if (passingStoppedCar) out += `<rect x="130" y="258" width="72" height="132" fill="${C.road}"/><path d="M137 258v132M202 296v94" stroke="${C.white}" stroke-width="3" stroke-dasharray="12 10"/>`;
   if (approachCrossing) out += passingStoppedCar ? zebra(139, 263, 210) : zebra();
   if (turningPedestrian) out += `<g transform="translate(${s.route === 'left' ? 193 : 396} 140) rotate(90)">${zebra(0, 0, 116, 28)}</g>`;
-  out += `<path d="M${passingStoppedCar ? 139 : 209} ${approachCrossing ? 307 : 284}h${passingStoppedCar ? 134 : 64}" stroke="${C.white}" stroke-width="7"/>`;
+  out += `<path data-marking="stop-line" d="M${passingStoppedCar ? 139 : 209} ${approachCrossing ? 307 : 284}h${passingStoppedCar ? 134 : 64}" stroke="${C.white}" stroke-width="7"/>`;
   if (s.feature === 'blind-corner') out += `<rect x="114" y="204" width="81" height="106" rx="3" fill="#e6ddc5"/><path d="M114 204h81v14h-81Z" fill="#567c73"/>`;
-  if (s.feature === 'blocked-exit') out += car(241, 52, 0, C.blue) + car(241, 130, 0, '#789c90');
+  if (s.feature === 'blocked-exit') out += s.route === 'right' ? car(400, 165, 90, C.blue, 1, false, '앞차', { dy: 112 }) + car(490, 165, 90, '#789c90', 1, false, '앞차', { dy: 165 }) : car(241, 52, 0, C.blue) + car(241, 130, 0, '#789c90');
   if (s.feature === 'wrong-lane') out += car(239, 343) + arrow(239, 284, 'straight', C.white, .65);
-  else out += car(passingStoppedCar ? 167 : 239, approachCrossing ? 349 : s.signal === 'yellow' && s.feature === 'stop-line' ? 323 : 349);
-  if (s.oncoming) out += car(320, 60, 180, C.blue);
-  if (passingStoppedCar) out += car(239, 329, 0, C.blue);
+  else out += car(passingStoppedCar ? 167 : 239, approachCrossing || s.position === 'far' ? 349 : s.signal ? 323 : 349);
+  if (s.oncoming) out += car(320, 60, 180, C.blue, 1, false, '맞은편 차', s.signal ? { side: 'left', dy: -22 } : {});
+  if (passingStoppedCar) out += car(239, 329, 0, C.blue, 1, false, '옆 차');
   if (turningPedestrian) out += person(s.route === 'left' ? 179 : 381, 177, C.teal, 1.15);
   else if (s.pedestrian || s.feature === 'pedestrian-waiting') out += person(s.feature === 'pedestrian-waiting' ? 183 : 301, 279, C.teal, 1.15);
-  if (s.cyclist) out += bicycle(185, 326);
+  if (s.cyclist) out += bicycle(185, 367);
   if (s.feature === 'turning-position' && s.label?.includes('유도선')) out += `<path d="M260 273v-60q0 -48 47 -48h51" stroke="${C.white}" fill="none" stroke-width="3" stroke-dasharray="8 7"/>`;
   if (s.feature === 'exit-queue') out += car(239, 137, 0, C.blue);
+  if (s.feature === 'departing-turn') out += `<path d="M257 238v-27q0 -47 46 -47h48" stroke="#729eac" stroke-width="4" stroke-dasharray="7 6" fill="none"/>${car(313, 171, 78, C.blue, 1, false, '앞차', { dy: 67 })}`;
+  if (s.feature === 'one-way-turn') out += arrow(239, 66, 'straight', C.white, .8) + arrow(320, 66, 'straight', C.white, .8);
+  if (s.feature === 'one-way-sign') out += arrow(94, 163, 'left', C.white, .8) + arrow(453, 225, 'left', C.white, .8);
   if (s.signal) out += trafficLight(s);
-  if (s.sign) out += sign(s.sign, s.signal ? 102 : 432, s.signal ? 307 : 69, .8);
+  if (s.sign) out += s.sign === 'one-way-left' ? sign(s.sign, 104, 68, .85) : sign(s.sign, s.signal ? 102 : 432, s.signal ? 307 : 69, .8);
   if (s.feature === 'stop-line') out += `<path d="M147 285h50" stroke="${C.ink}" stroke-width="2"/>${txt(148, 272, '정지선', 15, C.ink, 'text-anchor="end"')}`;
   return out;
 }
@@ -102,31 +166,49 @@ function road(s) {
   out += tree(76, 298, 25) + tree(111, 61, 19) + house(487, 335, 40, 29, 41);
   if (s.kind === 'speed' && s.sign) out += `<rect x="207" y="168" width="62" height="55" rx="6" fill="${C.white}" opacity=".16"/>${txt(239, 207, s.sign, 35, C.white, 'text-anchor="middle"')}`;
   if (s.feature === 'wrong-lane') out += arrow(239, 191, 'straight', C.white, .85) + arrow(318, 191, 'right', C.white, .85);
-  if (s.feature === 'center-yellow') out += arrow(239, 145, 'straight', C.white, .85) + arrow(318, 145, 'straight', C.white, .85) + car(318, 238, 0, C.blue);
+  if (s.feature === 'center-yellow') out += arrow(239, 145, 'straight', C.white, .85) + arrow(318, 145, 'straight', C.white, .85) + car(318, 238, 0, C.blue, 1, false, '옆 차');
   if (s.feature === 'one-way') out += arrow(317, 191, 'straight', C.white, 1.05);
   if (s.feature === 'narrow-road') out += `<rect x="202" width="30" height="390" fill="${C.grass}"/><rect x="334" width="24" height="390" fill="${C.grass}"/><path d="M234 0v390M331 0v390" stroke="${C.white}" stroke-width="2"/>`;
   if (s.feature === 'blind-spot') out += `<path d="M246 246l-41 -65v115Z" fill="${C.coral}" opacity=".18"/>`;
   const myX = s.feature === 'right-lane' || s.feature === 'blind-spot' ? 245 : wide ? 177 : s.feature === 'narrow-road' ? 258 : 239;
   out += car(myX, 294);
-  if (!sameDirection && (s.oncoming || ['no-centerline', 'narrow-road'].includes(s.feature))) out += car(wide ? 320 : 318, 106, 180, C.blue);
-  if (s.kind === 'speed' && s.feature === 'exit-queue') out += car(239, 375, 0, C.blue, .7);
-  if (s.feature === 'change-lane' || s.feature === 'blind-spot') out += car(177, 204, 0, C.blue);
+  if (!sameDirection && (s.oncoming || ['no-centerline', 'narrow-road'].includes(s.feature))) out += car(wide ? 320 : 318, 106, 180, C.blue, 1, false, '맞은편 차', s.sign ? { side: 'left', dy: -48 } : {});
+  if (s.kind === 'speed' && s.feature === 'exit-queue') out += car(239, 375, 0, C.blue, .7, false, '뒤차');
+  if (s.feature === 'change-lane' || s.feature === 'blind-spot') out += car(177, 204, 0, C.blue, 1, false, '옆 차');
   if (s.feature === 'cycle-pass' || s.cyclist) out += bicycle(wide ? 151 : 216, 187);
-  if (s.feature === 'shoulder') out += car(145, 133, 0, C.blue, .8);
+  if (s.feature === 'shoulder') out += car(145, 133, 0, C.blue, .8, false, '정차한 차');
   if (s.feature === 'left-lane') out += arrow(177, 159, 'straight', C.white, .8) + arrow(245, 159, 'straight', C.white, .8);
   if (s.sign) out += sign(s.sign, 440, 91, .9);
   return out;
 }
 
 function rail(s) {
-  const closing = s.feature === 'rail-closing';
-  let out = `<rect x="202" width="156" height="390" fill="${C.road}"/><path d="M280 0v390" stroke="${C.white}" stroke-width="3" stroke-dasharray="15 15"/><rect y="128" width="560" height="88" fill="#c7c5b3"/>${Array.from({ length: 24 }, (_, i) => `<path d="M${i * 25} 132v80" stroke="#9d9f8b" stroke-width="8"/>`).join('')}<path d="M0 146h560M0 169h560M0 186h560M0 208h560" stroke="#6b8177" stroke-width="5"/><path d="M209 271h64" stroke="${C.white}" stroke-width="7"/>${car(240, 324)}${tree(91, 291, 26)}${house(457, 115, 50, 37, 46)}`;
-  const barD = closing && s.label?.includes('내려오는') ? 'M184 247l109 -71' : 'M184 247l-2 -111';
-  out += `<circle cx="184" cy="247" r="11" fill="${C.ink}"/><path d="${barD}" stroke="${C.yellow}" stroke-width="9"/><path d="${barD}" stroke="${C.ink}" stroke-width="9" stroke-dasharray="12 15"/><path d="M144 249v-89M129 156l30 -30M129 126l30 30" stroke="${C.yellow}" stroke-width="7"/><path d="M129 156l30 -30M129 126l30 30" stroke="${C.ink}" stroke-width="7" stroke-dasharray="7 8"/><rect x="119" y="168" width="50" height="24" rx="12" fill="${C.ink}"/><circle cx="132" cy="180" r="8" fill="${closing ? C.red : '#637d6a'}"/><circle cx="156" cy="180" r="8" fill="${closing ? C.red : '#637d6a'}"/>`;
-  if (s.feature === 'rail-blocked') out += car(239, 55, 0, C.blue) + car(239, 130, 0, '#81a394');
-  if (s.feature === 'rail-signal' || s.signal) out += `<path d="M422 111v139H360" stroke="#819b88" stroke-width="5" fill="none"/>${trafficLight({ signal: s.signal || 'green' }, 373, 226)}`;
-  if (closing) out += `<g><rect x="378" y="143" width="174" height="59" rx="7" fill="#eee9d7"/><rect x="378" y="184" width="174" height="9" fill="${C.teal}"/><rect x="390" y="153" width="32" height="23" rx="3" fill="#769997"/><rect x="433" y="153" width="32" height="23" rx="3" fill="#769997"/><rect x="477" y="153" width="32" height="23" rx="3" fill="#769997"/></g>`;
-  return out;
+  const separate = s.signalScope === 'separate-intersection';
+  const crossingSignal = !separate && (s.signalScope === 'crossing' || s.feature === 'rail-signal' || Boolean(s.signal));
+  const flashing = s.alarm ? s.alarm === 'flashing' : s.feature === 'rail-closing';
+  const closed = s.gate ? s.gate === 'closed' : s.feature === 'rail-closing' && s.label?.includes('내려오는');
+  const checked = s.stage === 'stopped-checked';
+  const railTop = separate ? 158 : 128, railBottom = separate ? 222 : 216;
+  const gateY = railBottom + 31, stopY = gateY + 24;
+  const alarmY = gateY - 67, crossY = alarmY - 39;
+  const myY = checked ? stopY + 39 : 340;
+  let out = `<g data-rail-scene="true" data-gate-state="${closed ? 'closed' : 'open'}" data-alarm-state="${flashing ? 'flashing' : 'off'}" data-stop-stage="${checked ? 'stopped-checked' : 'approaching'}"><rect x="202" width="156" height="390" fill="${C.road}"/><path d="M280 0v390" stroke="${C.white}" stroke-width="3" stroke-dasharray="15 15"/>`;
+  if (separate) out += `<g data-junction="separate-intersection"><rect width="560" height="72" fill="${C.road}"/><path d="M0 36h195M364 36h196" stroke="${C.white}" stroke-width="3" stroke-dasharray="13 12"/><path d="M0 70h202M358 70h202" stroke="${C.white}" stroke-width="3"/><path data-marking="stop-line" data-signal-scope="separate-intersection" d="M209 91h64" stroke="${C.white}" stroke-width="7"/><g data-signal-scope="separate-intersection">${trafficLight({ signal: s.signal || 'green' }, 382, 7)}<path d="M382 34h-16v57h-87" stroke="${C.ink}" stroke-width="2" fill="none"/></g>${txt(452, 125, '앞 교차로 신호', 19, C.ink, 'text-anchor="middle"')}</g>`;
+  else out += house(457, 115, 50, 37, 46);
+  out += `<rect y="${railTop}" width="560" height="${railBottom - railTop}" fill="#c7c5b3"/>${Array.from({ length: 24 }, (_, i) => `<path d="M${i * 25} ${railTop + 4}v${railBottom - railTop - 8}" stroke="#9d9f8b" stroke-width="8"/>`).join('')}<path d="M0 ${railTop + 10}h560M0 ${railTop + 25}h560M0 ${railBottom - 25}h560M0 ${railBottom - 10}h560" stroke="#6b8177" stroke-width="5"/><path data-marking="stop-line" data-signal-scope="crossing" d="M209 ${stopY}h64" stroke="${C.white}" stroke-width="7"/>${car(240, myY)}${!checked ? `<path d="M230 ${myY + 40}v7M240 ${myY + 40}v9M250 ${myY + 40}v7" stroke="#6a9686" stroke-width="3" stroke-linecap="round"/>` : `<path d="M230 ${myY - 27}l-38 -17M250 ${myY - 27}l38 -17" stroke="#608b7b" stroke-width="2" stroke-dasharray="5 4"/>`}`;
+  const barD = closed ? `M184 ${gateY}h166` : `M184 ${gateY}v-111`;
+  out += `<g data-gate="${closed ? 'closed' : 'open'}"><circle cx="184" cy="${gateY}" r="11" fill="${C.ink}"/><path d="${barD}" stroke="${C.yellow}" stroke-width="9"/><path d="${barD}" stroke="${C.ink}" stroke-width="9" stroke-dasharray="12 15"/></g><g data-signal-type="rail-alarm" data-alarm-state="${flashing ? 'flashing' : 'off'}"><path d="M144 ${gateY + 2}V${crossY + 19}M129 ${crossY + 15}l30 -30M129 ${crossY - 15}l30 30" stroke="${C.yellow}" stroke-width="7"/><path d="M129 ${crossY + 15}l30 -30M129 ${crossY - 15}l30 30" stroke="${C.ink}" stroke-width="7" stroke-dasharray="7 8"/><rect x="115" y="${alarmY - 15}" width="58" height="30" rx="15" fill="${C.ink}"/><circle cx="130" cy="${alarmY}" r="10" fill="${flashing ? C.red : '#683e3b'}" stroke="#b55c50" stroke-width="1.5"/><circle cx="157" cy="${alarmY}" r="10" fill="${flashing ? '#f16c54' : '#683e3b'}" stroke="#b55c50" stroke-width="1.5"/>${flashing ? `<path d="M118 ${alarmY - 21}l-6 -6M141 ${alarmY - 22}v-9M165 ${alarmY - 23}l6 -6M110 ${alarmY}h-9M177 ${alarmY}h8" stroke="${C.red}" stroke-width="3" stroke-linecap="round"/>` : ''}</g>`;
+  const labelY = separate ? 249 : 67, statusY = separate ? 291 : 207;
+  out += `<rect x="11" y="${labelY}" width="181" height="34" rx="8" fill="${C.white}"/>${txt(102, labelY + 24, '건널목 경보등', 22, C.ink, 'text-anchor="middle"')}<path d="M100 ${separate ? labelY : labelY + 36}V${alarmY}h13" fill="none" stroke="${C.ink}" stroke-width="2"/><circle cx="113" cy="${alarmY}" r="3" fill="${C.ink}"/><rect x="12" y="${statusY}" width="151" height="31" rx="8" fill="${C.white}"/>${txt(87, statusY + 22, flashing ? '빨간불 점멸' : '꺼짐', 19, flashing ? C.red : C.ink, 'text-anchor="middle"')}`;
+  if (s.exitBlocked || s.feature === 'rail-blocked') out += car(239, 27, 0, C.blue, .65) + car(239, railTop - 34, 0, '#81a394', .65);
+  if (crossingSignal) out += `<g data-signal-scope="crossing"><rect x="370" y="225" width="174" height="33" rx="8" fill="${C.white}"/>${txt(457, 249, '차량 신호등', 22, C.ink, 'text-anchor="middle"')}<path d="M445 258v9" stroke="${C.ink}" stroke-width="2"/>${trafficLight({ signal: s.signal || 'green' }, 373, 267)}<path d="M373 294h-15v${stopY - 294}h-78" stroke="${C.ink}" stroke-width="2" fill="none"/></g>`;
+  else out += `<g aria-label="건널목용 차량 신호등 없음"><rect x="374" y="274" width="172" height="78" rx="10" fill="${C.white}" stroke="#cbd9cb" stroke-width="1.5"/>${separate ? txt(460, 294, '건널목용', 18, C.ink, 'text-anchor="middle"') : ''}${txt(460, separate ? 318 : 303, '차량 신호등', 22, C.ink, 'text-anchor="middle"')}${txt(460, separate ? 342 : 333, '없음', 24, C.ink, 'text-anchor="middle"')}</g>`;
+  if (flashing || s.trainPassed) {
+    const trainX = s.trainPassed ? 382 : closed ? 207 : -66;
+    const trainY = railTop + 11, trainWidth = s.trainPassed ? 174 : closed ? 190 : 162;
+    out += `<g data-train-position="${s.trainPassed ? 'passed' : closed ? 'crossing' : 'approaching'}"><rect x="${trainX}" y="${trainY}" width="${trainWidth}" height="${railBottom - railTop - 22}" rx="8" fill="#eee9d7" stroke="#80978d" stroke-width="2"/><path d="M${trainX + 1} ${railBottom - 21}h${trainWidth - 2}" stroke="${C.teal}" stroke-width="8"/>${Array.from({ length: 3 }, (_, i) => `<rect x="${trainX + 13 + i * 43}" y="${trainY + 9}" width="31" height="22" rx="3" fill="#769997"/>`).join('')}<path d="M${trainX + trainWidth - 26} ${trainY - 6}h21m-7 -6 7 6 -7 6" stroke="#496e60" stroke-width="3" fill="none"/></g>`;
+  }
+  return out + '</g>';
 }
 
 function highway(s) {
@@ -134,7 +216,7 @@ function highway(s) {
     return `<path d="M169 390V210L108 0H452L391 210v180Z" fill="${C.road}"/><path d="M280 390V0M181 390V210L132 0M379 390V210L428 0" fill="none" stroke="${C.white}" stroke-width="3" stroke-dasharray="16 14"/><rect x="135" y="133" width="290" height="14" rx="3" fill="#55776a"/><rect x="153" y="126" width="17" height="87" rx="4" fill="#839f8a"/><rect x="270" y="126" width="20" height="87" rx="4" fill="#839f8a"/><rect x="390" y="126" width="17" height="87" rx="4" fill="#839f8a"/><rect x="165" y="63" width="105" height="56" rx="5" fill="#756490"/>${txt(216, 87, 'ETC', 25, C.white, 'text-anchor="middle"')}${txt(216, 107, '専用', 16, C.white, 'text-anchor="middle"')}<rect x="289" y="63" width="105" height="56" rx="5" fill="${C.teal}"/>${txt(341, 97, '一般', 26, C.white, 'text-anchor="middle"')}${s.feature === 'etc-closed' ? `<path d="M179 172h83" stroke="${C.white}" stroke-width="8"/><path d="M179 172h83" stroke="${C.red}" stroke-width="8" stroke-dasharray="13 13"/><circle cx="217" cy="38" r="12" fill="${C.red}"/>` : `<circle cx="217" cy="38" r="12" fill="${C.teal}"/>`}${car(225, 323)}${s.feature === 'exit-queue' ? car(225, 235, 0, C.blue) : ''}${tree(82, 301, 25)}${tree(467, 265, 27)}`;
   }
   if (s.feature === 'merging') {
-    return `<path d="M240 0h176v390H240Z" fill="${C.road}"/><path d="M135 390V320Q135 252 214 199L281 117" fill="none" stroke="${C.road}" stroke-width="68"/><path d="M251 0v137M251 249v141M330 0v390M405 0v390M113 390v-68q0 -88 82 -140" fill="none" stroke="${C.white}" stroke-width="3" stroke-dasharray="16 15"/>${car(281, s.oncoming ? 324 : 218, 0, C.blue)}${car(135, 324)}${tree(88, 135, 25)}${tree(478, 288, 27)}${arrow(281, 68, 'straight', C.white, .8)}`;
+    return `<path d="M240 0h176v390H240Z" fill="${C.road}"/><path d="M135 390V320Q135 252 214 199L281 117" fill="none" stroke="${C.road}" stroke-width="68"/><path d="M251 0v137M251 249v141M330 0v390M405 0v390M113 390v-68q0 -88 82 -140" fill="none" stroke="${C.white}" stroke-width="3" stroke-dasharray="16 15"/>${car(281, s.oncoming ? 324 : 218, 0, C.blue, 1, false, '본선 차량')}${car(135, 324)}${tree(88, 135, 25)}${tree(478, 288, 27)}${arrow(281, 68, 'straight', C.white, .8)}`;
   }
   if (s.feature === 'missed-exit' || s.feature === 'exit-queue') {
     return `<rect x="180" width="176" height="390" fill="${C.road}"/><path d="M221 202Q136 189 91 82L56 0" fill="none" stroke="${C.road}" stroke-width="65"/><path d="M269 0v390M190 229v161M346 0v390" fill="none" stroke="${C.white}" stroke-width="3" stroke-dasharray="16 15"/><path d="M180 37l50 93h-48Z" fill="${C.white}" opacity=".8"/><rect x="30" y="22" width="104" height="49" rx="4" fill="${C.teal}"/>${txt(82, 54, '출구 ↖', 24, C.white, 'text-anchor="middle"')}${car(225, s.feature === 'missed-exit' ? 95 : 324)}${s.feature === 'exit-queue' ? car(225, 239, 0, C.blue) + car(197, 159, -25, '#81a394') + car(141, 99, -35, C.blue) : ''}${tree(452, 284, 27)}`;
@@ -184,6 +266,11 @@ function emergency(s) {
   return `${nearJunction ? `<rect y="95" width="560" height="112" fill="${C.road}"/><path d="M0 150h560" stroke="${C.white}" stroke-width="3" stroke-dasharray="15 14"/>` : ''}<rect x="202" width="156" height="390" fill="${C.road}"/><path d="M280 0v${nearJunction ? 87 : 390}${nearJunction ? 'M280 215v175' : ''}" stroke="${C.white}" stroke-width="3" stroke-dasharray="15 14"/><path d="M210 220h64" stroke="${C.white}" stroke-width="${nearJunction ? 6 : 0}"/>${car(239, 269)}${car(239, 353, 0, C.white, .85, true)}${car(319, 53, 180, C.blue)}${tree(108, 286, 25)}${house(467, 304, 53, 36, 54)}<path d="M193 339l-14 -8M285 339l14 -8M198 321l-10 -12M281 321l10 -12" stroke="${C.red}" stroke-width="4" stroke-linecap="round"/>`;
 }
 
+function missedExitNavigation(compact = false) {
+  if (compact) return `<g data-nav-feature="missed-exit" data-nav-position="past-fork" transform="translate(10 394)"><rect width="540" height="130" rx="19" fill="${C.white}" stroke="#cbd9cb" stroke-width="2"/><rect x="12" y="10" width="206" height="110" rx="12" fill="#e9ede0"/><rect x="120" y="10" width="44" height="110" fill="#d2d9cb"/><path d="M142 96Q98 92 70 61L39 40" fill="none" stroke="#d2d9cb" stroke-width="33"/><path d="M142 15v100" stroke="${C.white}" stroke-width="2" stroke-dasharray="6 5"/><path d="M142 115V99Q101 95 73 67L43 44" fill="none" stroke="${C.teal}" stroke-width="6" stroke-dasharray="7 5" stroke-linecap="round"/><circle cx="43" cy="44" r="6" fill="${C.teal}" stroke="${C.white}" stroke-width="2"/><path d="M142 17l-11 22 11 -4 11 4Z" fill="${C.coral}" stroke="${C.white}" stroke-width="2.5"/><path d="M142 47v26" stroke="${C.coral}" stroke-width="3" stroke-dasharray="3 5"/>${txt(374, 46, '내비게이션', 20, C.ink, 'text-anchor="middle"')}${txt(374, 94, '경로 이탈', 38, C.ink, 'text-anchor="middle"')}</g>`;
+  return `<g data-nav-feature="missed-exit" data-nav-position="past-fork" transform="translate(550 17)"><rect width="194" height="354" rx="22" fill="${C.white}" stroke="#cbd9cb" stroke-width="2"/>${txt(97, 34, '내비게이션', 18, C.ink, 'text-anchor="middle"')}<rect x="12" y="51" width="170" height="248" rx="12" fill="#e9ede0"/><rect x="94" y="51" width="48" height="248" fill="#d2d9cb"/><path d="M118 237Q80 226 43 185L25 165" fill="none" stroke="#d2d9cb" stroke-width="40"/><path d="M118 58v234" stroke="${C.white}" stroke-width="2" stroke-dasharray="7 6"/><path d="M118 289V241Q80 232 43 190L25 169" fill="none" stroke="${C.teal}" stroke-width="8" stroke-dasharray="10 7" stroke-linecap="round"/><circle cx="25" cy="169" r="7" fill="${C.teal}" stroke="${C.white}" stroke-width="2"/><path d="M118 94l-12 24 12 -5 12 5Z" fill="${C.coral}" stroke="${C.white}" stroke-width="3"/><path d="M118 128v58" stroke="${C.coral}" stroke-width="3" stroke-dasharray="4 6"/>${txt(97, 333, '경로 이탈', 26, C.ink, 'text-anchor="middle"')}</g>`;
+}
+
 function navigation(route = 'straight') {
   const directions = { left: '좌회전', right: '우회전', straight: '직진' };
   const routePath = route === 'left' ? 'M99 272V183Q99 160 77 160H38' : route === 'right' ? 'M99 272V183Q99 160 121 160H163' : 'M99 272V107';
@@ -229,7 +316,8 @@ export function sceneArt(scene = {}, description = '') {
   const captionLines = wrapCaption(caption, width - 38);
   const height = (compactNav ? 566 : 430) + Math.max(0, captionLines.length - 1) * 24;
   const captionY = compactNav ? 551 : 416;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(description || caption || '일본 도로의 운전 상황')}" class="scene-art"><title>${esc(description || caption || '운전 상황')}</title><rect width="${width}" height="${height}" rx="18" fill="${C.sage}"/><svg width="540" height="390" viewBox="0 0 560 390" x="${hasNav && !compactNav ? 0 : 10}" y="0" overflow="hidden">${art}</svg>${hasNav ? compactNav ? compactNavigation(s.route) : navigation(s.route) : ''}${captionLines.map((line, index) => txt(width / 2, captionY + index * 24, line, 19, C.ink, 'text-anchor="middle"')).join('')}${s.extraLabel ? `<rect x="15" y="348" width="${Math.min(510, 28 + String(s.extraLabel).length * 19)}" height="33" rx="10" fill="${C.white}"/>${txt(29, 371, s.extraLabel, 17)}` : ''}</svg>`;
+  const navArt = !hasNav ? '' : s.feature === 'missed-exit' ? missedExitNavigation(compactNav) : compactNav ? compactNavigation(s.route) : navigation(s.route);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(description || caption || '일본 도로의 운전 상황')}" class="scene-art"><title>${esc(description || caption || '운전 상황')}</title><rect width="${width}" height="${height}" rx="18" fill="${C.sage}"/><svg width="540" height="390" viewBox="0 0 560 390" x="${hasNav && !compactNav ? 0 : 10}" y="0" overflow="hidden">${art}${vehicleCallouts(art)}</svg>${navArt}${captionLines.map((line, index) => txt(width / 2, captionY + index * 24, line, 19, C.ink, 'text-anchor="middle"')).join('')}${s.extraLabel ? `<rect x="15" y="348" width="${Math.min(510, 28 + String(s.extraLabel).length * 19)}" height="33" rx="10" fill="${C.white}"/>${txt(29, 371, s.extraLabel, 17)}` : ''}</svg>`;
 }
 
 export function heroArt() {

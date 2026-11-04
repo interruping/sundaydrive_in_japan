@@ -1,10 +1,9 @@
-import { heroArt, sceneArt } from './art.js';
+import { heroArt } from './art.js';
 import { CATEGORIES, QUESTION_BY_ID, SOURCES } from './questions.js';
 import { STORAGE_KEY, EXAM_LENGTH, PASS_SCORE, createExam, createReview, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
 
 const main = document.querySelector('#main');
 const leaveDialog = document.querySelector('#leave-dialog');
-const compactScene = matchMedia('(max-width: 700px)');
 const escape = text => String(text).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const icon = (name, size = 24) => {
   const paths = {
@@ -56,14 +55,14 @@ function quizView() {
   const count = attempt.items.length;
   const number = String(attempt.index + 1).padStart(2, '0');
   const progress = attempt.index + (answered ? 1 : 0);
-  const source = SOURCES[question.source];
+    const sources = (question.sources || [question.source]).map(key => SOURCES[key]);
   return `<section class="quiz-shell">
     ${header(`<div class="question-count"><span>${attempt.mode === 'review' ? '오답 복습' : CATEGORIES[question.category]}</span><strong>${number}<span> / ${String(count).padStart(2, '0')}</span></strong></div>`)}
     <div class="progress-track" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${count}" aria-valuenow="${progress}"><span style="width:${progress / count * 100}%"></span></div>
     <div class="quiz-body">
       <div class="scene-frame">
         <div class="scene-legend"><span><i class="car-dot"></i> 내 차</span>${question.scene.nav ? '<span class="nav-hint">그림과 내비를 함께 봐 주세요</span>' : '<span class="nav-hint">그림 속 상황을 살펴보세요</span>'}</div>
-        ${sceneArt({ ...question.scene, compact: compactScene.matches }, question.description)}
+        <picture class="question-picture"><source media="(max-width: 700px)" srcset="./scenes/${question.id}.mobile.svg"><img class="scene-art" src="./scenes/${question.id}.svg" alt="${escape(question.description)}" fetchpriority="high"></picture>
       </div>
       <div class="question-area">
         <div class="question-intro"><span class="question-badge">${attempt.mode === 'review' ? '다시 한 번' : '어떻게 할까요?'}</span>${attempt.mode === 'exam' ? '<span class="points-note">한 문제 5점</span>' : ''}</div>
@@ -82,7 +81,7 @@ function quizView() {
         </div>
         ${answered ? `<section class="feedback ${correct ? 'feedback-correct' : 'feedback-wrong'}" aria-labelledby="feedback-title">
           <div class="feedback-copy"><h2 id="feedback-title" tabindex="-1">${correct ? '맞았어요!' : '이 상황은 이렇게 기억해요.'}</h2><p>${escape(question.explanation)}</p>
-          <a class="source-link" href="${source.url}" target="_blank" rel="noopener noreferrer">${escape(source.name)} ${icon('external', 13)}<span class="sr-only"> (새 창)</span></a></div>
+          <div class="source-links">${sources.map(source => `<a class="source-link" href="${source.url}" target="_blank" rel="noopener noreferrer">${escape(source.name)} ${icon('external', 13)}<span class="sr-only"> (새 창)</span></a>`).join('')}</div></div>
           <button class="button next-button" data-action="next">${attempt.index === count - 1 ? '결과 보기' : '다음 문제'} ${icon('arrow', 22)}</button>
         </section>` : `<p class="quiz-note">${attempt.mode === 'review' ? '헷갈렸던 상황을 다시 익혀 봐요.' : `${EXAM_LENGTH}문제 중 18문제를 맞히면 통과해요.`}</p>`}
         ${!storageAvailable ? '<p class="storage-note" role="status">이 브라우저에서는 진행 상황이 저장되지 않아요. 창을 닫기 전에 끝까지 풀어 주세요.</p>' : ''}
@@ -203,5 +202,4 @@ document.addEventListener('keydown', event => {
   }
 });
 
-compactScene.addEventListener('change', () => { if (state.screen === 'quiz') render(); });
 render();
