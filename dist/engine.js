@@ -7,9 +7,9 @@ export const STORAGE_KEY = 'sunday-drive:progress';
 // Core confusions are covered in every exam, not left to chance.
 export const REQUIRED_TOPICS = [
   { category: 'signals', count: 2, matches: q => q.scene.arrows?.length >= 2 },
-  { category: 'turns', count: 1, matches: q => q.scene.feature === 'offset-stop-lines' },
-  { category: 'turns', count: 1, matches: q => q.scene.feature === 'waiting-marking' },
-  { category: 'entry', count: 1, matches: q => ['entry-01', 'entry-02'].includes(q.id) },
+  { category: 'turns', count: 1, matches: q => q.id === 'turn-01' },
+  { category: 'turns', count: 1, matches: q => q.id === 'turn-02' },
+  { category: 'entry', count: 1, matches: q => q.id === 'entry-01' },
   { category: 'entry', count: 1, matches: q => q.scene.sign === 'no-crossing' },
   { category: 'lanes', count: 1, matches: q => q.scene.kind === 'lane-junction' },
   { category: 'railway', count: 1, matches: q => q.scene.signalScope === 'crossing' },

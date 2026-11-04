@@ -89,18 +89,6 @@ function markingBadge(letter, x, y) {
   return `<circle cx="${x}" cy="${y}" r="16" fill="${C.white}" stroke="${C.ink}" stroke-width="2"/>${txt(x, y + 7, letter, 22, C.ink, 'text-anchor="middle"')}`;
 }
 
-function offsetStopLines(s) {
-  const straight = s.myLane === 'straight';
-  const myX = straight ? 197 : 275;
-  const myY = s.position === 'at-stop' ? (straight ? 322 : 268) : 345;
-  let out = `<rect y="80" width="560" height="100" fill="${C.road}"/><rect x="158" width="234" height="390" fill="${C.road}"/><path d="M0 84h158V0M392 0v84h168M0 176h158v214M392 390V176h168" stroke="${C.white}" stroke-width="3" fill="none"/><path d="M314 0v74M314 185v205" stroke="${C.white}" stroke-width="3"/><path d="M236 0v74M236 185v205M0 130h150M400 130h160" stroke="${C.white}" stroke-width="3" stroke-dasharray="12 11"/>${arrow(197, 254, 'straight', C.white, .65)}<path d="M275 208v-18q0 -10 10 -10h12m-10 -9 10 9 -10 9" stroke="${C.white}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path data-marking="stop-line" data-line-id="A" data-lane="straight" d="M164 282h66" stroke="${C.white}" stroke-width="8"/><path data-marking="stop-line" data-line-id="B" data-lane="right" d="M242 228h66" stroke="${C.white}" stroke-width="8"/>${markingBadge('A', 139, 282)}${markingBadge('B', 332, 228)}<path d="M155 282h8M309 228h7" stroke="${C.ink}" stroke-width="2"/>`;
-  out += car(myX, myY, 0, C.coral, 1, false, '내 차', { side: straight ? 'left' : 'right', dy: straight ? 28 : 28 });
-  out += straight ? car(275, 268, 0, C.blue, 1, false, '옆 차', { side: 'right', dy: 18 }) : car(197, s.straightMoving ? 226 : 323, 0, C.blue, 1, false, '옆 차', { side: 'left', dy: s.straightMoving ? -18 : 0 });
-  if (s.straightMoving && !straight) out += `<path d="M187 277v10M197 280v14M207 277v10" stroke="#6a9686" stroke-width="3" stroke-linecap="round"/>`;
-  if (s.signal) out += trafficLight(s, 405, 21);
-  return out;
-}
-
 function waitingJunction(s) {
   const inside = s.feature === 'right-turn-wait';
   let out = `<rect y="132" width="560" height="126" fill="${C.road}"/><rect x="202" width="156" height="390" fill="${C.road}"/><path d="M0 136h202V0M358 0v136h202M0 254h202v136M358 390V254h202" stroke="${C.white}" stroke-width="3" fill="none"/><path d="M280 0v126M280 265v125M0 195h194M366 195h194" stroke="${C.white}" stroke-width="3" stroke-dasharray="14 13"/><path data-marking="stop-line" data-line-id="A" d="M209 284h64" stroke="${C.white}" stroke-width="8"/>${markingBadge('A', 187, 284)}<path data-marking="waiting-guide" data-line-id="B" d="M232 193h44" stroke="${C.white}" stroke-width="5" stroke-dasharray="8 6"/><path d="M257 189q0 -25 29 -25h65" stroke="${C.white}" stroke-width="2.5" stroke-dasharray="7 7" fill="none"/>${markingBadge('B', 218, 193)}`;
@@ -123,7 +111,6 @@ function leftAllowedJunction(s) {
 
 function junction(s) {
   if (s.sign === 'left-allowed' || s.feature === 'redleft-permitted') return leftAllowedJunction(s);
-  if (s.feature === 'offset-stop-lines') return offsetStopLines(s);
   if (s.feature === 'waiting-marking' || s.feature === 'right-turn-wait') return waitingJunction(s);
   const crossing = s.kind === 'crossing' || s.pedestrian || s.cyclist || ['crosswalk', 'pedestrian-waiting', 'overtaking-crosswalk'].includes(s.feature);
   const turningPedestrian = s.pedestrian && ['left', 'right'].includes(s.route);

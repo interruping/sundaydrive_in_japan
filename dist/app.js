@@ -60,7 +60,7 @@ function quizView() {
     ${header(`<div class="question-count"><span>${attempt.mode === 'review' ? '오답 복습' : CATEGORIES[question.category]}</span><strong>${number}<span> / ${String(count).padStart(2, '0')}</span></strong></div>`)}
     <div class="progress-track" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${count}" aria-valuenow="${progress}"><span style="width:${progress / count * 100}%"></span></div>
     <div class="quiz-body">
-      <div class="scene-frame">
+      <div class="scene-frame ${question.scene.kind === 'deep-intersection' ? 'scene-frame-deep' : ''}">
         <div class="scene-legend"><span><i class="car-dot"></i> 내 차</span>${question.scene.nav ? '<span class="nav-hint">그림과 내비를 함께 봐 주세요</span>' : '<span class="nav-hint">그림 속 상황을 살펴보세요</span>'}</div>
         <picture class="question-picture"><source media="(max-width: 700px)" srcset="./scenes/${question.id}.mobile.svg"><img class="scene-art" src="./scenes/${question.id}.svg" alt="${escape(question.description)}" fetchpriority="high"></picture>
       </div>

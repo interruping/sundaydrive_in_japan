@@ -73,6 +73,7 @@ h1, h2, p { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 .scene-frame > svg { width: 100%; height: auto; max-height: 390px; }
 .question-picture { display: block; }
 .question-picture img { display: block; width: 100%; height: auto; max-height: 440px; object-fit: contain; }
+.scene-frame-deep .question-picture img { max-height: 580px; }
 .question-area { padding: 28px 0 0; }
 .question-intro { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .question-badge { font-size: 14px; font-weight: 700; color: var(--green); }
@@ -168,6 +169,7 @@ dialog::backdrop { background: rgb(20 48 39 / 38%); backdrop-filter: blur(4px); 
   .scene-legend .nav-hint { font-size: 10px; }
   .scene-frame > svg { max-height: none; }
   .question-picture img { max-height: none; }
+  .scene-frame-deep .question-picture img { max-height: none; }
   .question-area { padding-top: 23px; }
   .question-intro { margin-bottom: 10px; }
   .question-badge { font-size: 13px; }

@@ -52,16 +52,19 @@ test('lane arrows belong to actual lanes leading into a real intersection', asyn
   }
 });
 
-test('solid signal stop lines and internal waiting guides remain separate', async () => {
-  for (const id of ['turn-01', 'turn-02', 'turn-03', 'turn-04']) {
-    const svg = await scene(id);
-    assert.equal(count(svg, 'data-marking="stop-line"'), 2, id);
-    assert.equal(count(svg, 'data-marking="waiting-guide"'), 0, id);
-  }
-  for (const id of ['turn-05', 'turn-06', 'turn-07']) {
+test('the real-case reconstruction separates the entry stop line from a deep internal waiting guide', async () => {
+  for (const q of QUESTIONS.filter(q => q.scene.kind === 'deep-intersection')) {
+    const id = q.id;
     const svg = await scene(id);
     assert.equal(count(svg, 'data-marking="stop-line"'), 1, id);
     assert.equal(count(svg, 'data-marking="waiting-guide"'), 1, id);
+    const entry = Number(svg.match(/data-entry-line-y="(\d+)"/)[1]);
+    const waiting = Number(svg.match(/data-waiting-line-y="(\d+)"/)[1]);
+    const carLength = Number(svg.match(/data-car-length="(\d+)"/)[1]);
+    assert.ok(entry - waiting >= carLength * 5, `${id}: internal waiting position must be visibly deep, not a small stop-line offset`);
+    const ownY = Number(svg.match(/data-vehicle-role="own"[^>]*data-car-y="(\d+)"/)[1]);
+    if (q.scene.stage === 'before-entry') assert.ok(ownY - carLength / 2 > entry, id);
+    if (q.scene.stage === 'at-waiting') assert.ok(ownY - carLength / 2 > waiting && ownY < entry - carLength * 4, id);
   }
 });
 

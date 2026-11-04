@@ -22,7 +22,7 @@ test('60 distinct scenarios each have a picture, two choices, explanation and an
     assert.notEqual(q.choices[0], q.choices[1]);
     assert.ok([0, 1].includes(q.answer));
     assert.ok(q.scene.kind && q.description && q.explanation);
-    for (const key of q.sources) assert.match(SOURCES[key].url, /^https:\/\/(www\.npa\.go\.jp|www\.police\.pref\.[a-z]+\.(jp|lg\.jp)|www\.pref\.hiroshima\.lg\.jp|laws\.e-gov\.go\.jp|jaf\.or\.jp|jafmate\.jp)\//);
+    for (const key of q.sources) assert.match(SOURCES[key].url, /^https:\/\/(www\.npa\.go\.jp|www\.qsr\.mlit\.go\.jp|www\.police\.pref\.[a-z]+\.(jp|lg\.jp)|www\.pref\.hiroshima\.lg\.jp|laws\.e-gov\.go\.jp|jaf\.or\.jp|jafmate\.jp)\//);
   }
   assert.ok(QUESTIONS.filter(q => q.scene.nav).length >= 8);
 });
