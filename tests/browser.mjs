@@ -76,6 +76,35 @@ try {
   const result = await state();
   await page.reload();
   assert.deepEqual(await state(), result);
+  await click('correct-review');
+  assert.equal((await state()).screen, 'correct-review');
+  assert.equal(await page.locator('.choice:enabled').count(), 0);
+  assert.equal(await page.locator('#feedback-title').textContent(), '정답 해설');
+  assert.equal(await page.locator('h1').textContent(), QUESTION_BY_ID.get(result.attempt.items[0].id).prompt);
+  assert.equal(await page.locator('[data-action="correct-prev"]').isDisabled(), true);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+    await assertNoOverflow();
+    if (width !== 320) await screenshot(`correct-review-${width === 1440 ? 'desktop' : 'mobile'}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await click('correct-next');
+  const browsing = await state();
+  assert.equal(browsing.correctReviewIndex, 1);
+  assert.deepEqual(browsing.attempt, result.attempt);
+  await page.keyboard.press('2');
+  assert.deepEqual(await state(), browsing, 'Keyboard answer shortcuts do not change a completed answer');
+  await page.reload();
+  assert.deepEqual(await state(), browsing);
+  await click('correct-prev');
+  for (let i = 0; i < 18; i++) {
+    assert.equal(await page.locator('h1').textContent(), QUESTION_BY_ID.get(result.attempt.items[i].id).prompt);
+    if (i < 17) await click('correct-next');
+  }
+  await page.getByRole('button', { name: '다 봤어요', exact: true }).click();
+  assert.equal(await page.locator('.score strong').textContent(), '90');
+  assert.deepEqual((await state()).attempt, result.attempt);
+  console.log('PASS correct answers only, read-only explanations, navigation, reload, and original score');
   await click('review');
   assert.equal((await state()).attempt.items.length, 2);
   for (let i = 0; i < 2; i++) {
@@ -86,6 +115,10 @@ try {
   }
   assert.match(await page.locator('.result-content h1').textContent(), /이제 더 잘/);
   assert.equal(await page.locator('[data-action="review"]').count(), 0);
+  await click('correct-review');
+  assert.equal((await state()).attempt.mode, 'review');
+  await click('correct-return');
+  assert.equal(await page.locator('.score strong').textContent(), '2');
   await click('exam-result');
   assert.equal(await page.locator('.score strong').textContent(), '90');
   await click('retry');
@@ -99,6 +132,22 @@ try {
   assert.equal(await page.locator('[data-action="retry"]').count(), 1);
   await screenshot('retry-mobile');
   console.log('PASS 85-point retry');
+
+  for (const correctCount of [0, 1, 20]) {
+    const finished = createExam();
+    finished.items.forEach((item, index) => { item.answer = index < correctCount ? QUESTION_BY_ID.get(item.id).answer : 1 - QUESTION_BY_ID.get(item.id).answer; });
+    finished.index = finished.items.length;
+    await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: { ...freshState(), screen: 'result', attempt: finished, lastExam: finished } });
+    await page.reload();
+    assert.equal(await page.locator('[data-action="correct-review"]').isDisabled(), correctCount === 0);
+    if (correctCount) {
+      await click('correct-review');
+      assert.equal(await page.locator('.choice:enabled').count(), 0);
+      await page.locator('.review-toolbar [data-action="correct-return"]').click();
+      assert.equal(await page.locator('.score strong').textContent(), String(correctCount * 5));
+    }
+  }
+  console.log('PASS zero, one, and all-correct result handling');
 
   // Display each real scenario on mobile, including navigation, long prompts and feedback.
   const attempt = createExam();
@@ -116,7 +165,7 @@ try {
       return { valid: !document.querySelector('parsererror'), loaded: img.naturalWidth > 0, own: document.querySelectorAll('[data-vehicle-role="own"]').length, id: document.documentElement.getAttribute('data-question-id') };
     });
     assert.deepEqual(graphic, { valid: true, loaded: true, own: 1, id: question.id });
-    if (['signal-04', 'signal-10', 'turn-01', 'turn-05', 'entry-01', 'entry-03', 'lane-01', 'railway-04', 'priority-03'].includes(question.id)) await screenshot(`${question.id}-mobile`);
+    if (['signal-04', 'signal-10', 'turn-01', 'turn-05', 'entry-01', 'entry-03', 'lane-01', 'railway-04', 'priority-03', 'priority-07', 'priority-08'].includes(question.id)) await screenshot(`${question.id}-mobile`);
   }
   console.log('PASS all 60 illustrated scenarios at mobile size');
 

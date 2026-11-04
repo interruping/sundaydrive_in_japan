@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { QUESTIONS, QUESTION_BY_ID, CATEGORIES, SOURCES, EXAM_QUOTAS } from '../dist/questions.js';
-import { EXAM_LENGTH, REQUIRED_TOPICS, createExam, createReview, answerCurrent, nextQuestion, scoreAttempt, isValidAttempt, freshState, restoreState } from '../dist/engine.js';
+import { EXAM_LENGTH, REQUIRED_TOPICS, createExam, createReview, correctAnswers, answerCurrent, nextQuestion, scoreAttempt, isValidAttempt, freshState, restoreState } from '../dist/engine.js';
 
 function complete(attempt, rightCount) {
   let result = attempt;
@@ -93,6 +93,33 @@ test('reload restores the exact in-progress question, choice order, and revealed
   const exam = complete(createExam(), 18);
   const finished = { ...freshState(), screen: 'result', attempt: exam, lastExam: exam };
   assert.deepEqual(restoreState(JSON.stringify(finished)), finished);
+});
+
+test('correct-answer browsing keeps original order, chosen answers, and the exam score', () => {
+  const exam = complete(createExam(), 18);
+  const original = JSON.stringify(exam);
+  const items = correctAnswers(exam);
+  assert.equal(items.length, 18);
+  assert.deepEqual(items, exam.items.slice(0, 18));
+  const browsing = { ...freshState(), screen: 'correct-review', attempt: exam, lastExam: exam, correctReviewIndex: 7 };
+  assert.deepEqual(restoreState(JSON.stringify(browsing)), browsing);
+  assert.equal(JSON.stringify(exam), original);
+  assert.equal(scoreAttempt(exam).score, 90);
+  assert.equal(correctAnswers(complete(createExam(), 0)).length, 0);
+  assert.equal(correctAnswers(complete(createExam(), 20)).length, 20);
+});
+
+test('correct-answer browsing rejects missing answers and out-of-range positions without breaking legacy saves', () => {
+  const exam = complete(createExam(), 1);
+  const result = { ...freshState(), screen: 'result', attempt: exam, lastExam: exam };
+  const legacy = { ...result };
+  delete legacy.correctReviewIndex;
+  assert.deepEqual(restoreState(JSON.stringify(legacy)), result);
+  for (const correctReviewIndex of [-1, 1, 0.5, '0']) {
+    assert.deepEqual(restoreState(JSON.stringify({ ...result, screen: 'correct-review', correctReviewIndex })), freshState());
+  }
+  const zero = complete(createExam(), 0);
+  assert.deepEqual(restoreState(JSON.stringify({ ...freshState(), screen: 'correct-review', attempt: zero })), freshState());
 });
 
 test('corrupt, stale, mismatched and tampered saves recover safely', () => {

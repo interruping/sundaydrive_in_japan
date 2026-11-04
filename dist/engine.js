@@ -61,6 +61,10 @@ export function wrongQuestions(attempt) {
   return attempt.items.filter(item => item.answer !== null && item.answer !== QUESTION_BY_ID.get(item.id).answer).map(item => QUESTION_BY_ID.get(item.id));
 }
 
+export function correctAnswers(attempt) {
+  return attempt.items.filter(item => item.answer === QUESTION_BY_ID.get(item.id).answer);
+}
+
 export function createReview(exam, random = Math.random) {
   const mistakes = wrongQuestions(exam);
   return mistakes.length ? makeAttempt(mistakes, 'review', random) : null;
@@ -86,7 +90,7 @@ export function scoreAttempt(attempt) {
 }
 
 export function freshState() {
-  return { version: 1, bankVersion: BANK_VERSION, screen: 'home', attempt: null, lastExam: null };
+  return { version: 1, bankVersion: BANK_VERSION, screen: 'home', attempt: null, lastExam: null, correctReviewIndex: 0 };
 }
 
 export function isValidAttempt(attempt) {
@@ -110,13 +114,15 @@ export function restoreState(raw) {
   try {
     const state = JSON.parse(raw);
     if (!state || state.version !== 1 || state.bankVersion !== BANK_VERSION) return freshState();
-    if (!['home', 'quiz', 'result'].includes(state.screen)) return freshState();
+    if (!['home', 'quiz', 'result', 'correct-review'].includes(state.screen)) return freshState();
     if (state.attempt !== null && !isValidAttempt(state.attempt)) return freshState();
     if (state.lastExam !== null && (!isValidAttempt(state.lastExam) || state.lastExam.mode !== 'exam' || state.lastExam.index !== state.lastExam.items.length)) return freshState();
     if (state.screen !== 'home' && !state.attempt) return freshState();
     if (state.screen === 'quiz' && state.attempt.index === state.attempt.items.length) return freshState();
     if (state.screen === 'result' && state.attempt.index !== state.attempt.items.length) return freshState();
-    return { version: 1, bankVersion: BANK_VERSION, screen: state.screen, attempt: state.attempt, lastExam: state.lastExam };
+    const correctReviewIndex = state.correctReviewIndex ?? 0;
+    if (state.screen === 'correct-review' && (state.attempt.index !== state.attempt.items.length || !Number.isInteger(correctReviewIndex) || correctReviewIndex < 0 || correctReviewIndex >= correctAnswers(state.attempt).length)) return freshState();
+    return { version: 1, bankVersion: BANK_VERSION, screen: state.screen, attempt: state.attempt, lastExam: state.lastExam, correctReviewIndex: state.screen === 'correct-review' ? correctReviewIndex : 0 };
   } catch {
     return freshState();
   }

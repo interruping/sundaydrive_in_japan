@@ -1,7 +1,7 @@
 import { heroArt } from './art.js';
 import { circularArrows } from './symbols.js';
 import { CATEGORIES, QUESTION_BY_ID, SOURCES } from './questions.js';
-import { STORAGE_KEY, EXAM_LENGTH, PASS_SCORE, createExam, createReview, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
+import { STORAGE_KEY, EXAM_LENGTH, PASS_SCORE, createExam, createReview, correctAnswers, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
 
 const main = document.querySelector('#main');
 const leaveDialog = document.querySelector('#leave-dialog');
@@ -49,24 +49,28 @@ function header(right) {
 
 function quizView() {
   const { attempt } = state;
-  const item = attempt.items[attempt.index];
+  const browsingCorrect = state.screen === 'correct-review';
+  const items = browsingCorrect ? correctAnswers(attempt) : attempt.items;
+  const index = browsingCorrect ? state.correctReviewIndex : attempt.index;
+  const item = items[index];
   const question = QUESTION_BY_ID.get(item.id);
   const answered = item.answer !== null;
   const correct = item.answer === question.answer;
-  const count = attempt.items.length;
-  const number = String(attempt.index + 1).padStart(2, '0');
-  const progress = attempt.index + (answered ? 1 : 0);
-    const sources = (question.sources || [question.source]).map(key => SOURCES[key]);
+  const count = items.length;
+  const number = String(index + 1).padStart(2, '0');
+  const progress = index + (answered ? 1 : 0);
+  const sources = (question.sources || [question.source]).map(key => SOURCES[key]);
   return `<section class="quiz-shell">
-    ${header(`<div class="question-count"><span>${attempt.mode === 'review' ? '오답 복습' : CATEGORIES[question.category]}</span><strong>${number}<span> / ${String(count).padStart(2, '0')}</span></strong></div>`)}
-    <div class="progress-track" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${count}" aria-valuenow="${progress}"><span style="width:${progress / count * 100}%"></span></div>
+    ${header(`<div class="question-count"><span>${browsingCorrect ? '맞은 문제 다시 보기' : attempt.mode === 'review' ? '오답 복습' : CATEGORIES[question.category]}</span><strong>${number}<span> / ${String(count).padStart(2, '0')}</span></strong></div>`)}
+    <div class="progress-track" role="progressbar" aria-label="${browsingCorrect ? '맞은 문제 확인' : '풀이 진행'}" aria-valuemin="0" aria-valuemax="${count}" aria-valuenow="${progress}"><span style="width:${progress / count * 100}%"></span></div>
+    ${browsingCorrect ? `<div class="review-toolbar"><button class="text-button" data-action="correct-return">${icon('back', 18)} 결과로 돌아가기</button><span>맞은 문제 ${number} / ${count}</span></div>` : ''}
     <div class="quiz-body">
       <div class="scene-frame ${question.scene.kind === 'deep-intersection' ? 'scene-frame-deep' : ''}">
         <div class="scene-legend"><span><i class="car-dot"></i> 내 차</span>${question.scene.nav ? '<span class="nav-hint">그림과 내비를 함께 봐 주세요</span>' : '<span class="nav-hint">그림 속 상황을 살펴보세요</span>'}</div>
         <picture class="question-picture"><source media="(max-width: 700px)" srcset="./scenes/${question.id}.mobile.svg"><img class="scene-art" src="./scenes/${question.id}.svg" alt="${escape(question.description)}" fetchpriority="high"></picture>
       </div>
       <div class="question-area">
-        <div class="question-intro"><span class="question-badge">${attempt.mode === 'review' ? '다시 한 번' : '어떻게 할까요?'}</span>${attempt.mode === 'exam' ? '<span class="points-note">한 문제 5점</span>' : ''}</div>
+        <div class="question-intro"><span class="question-badge">${browsingCorrect ? '맞은 문제 다시 보기' : attempt.mode === 'review' ? '다시 한 번' : '어떻게 할까요?'}</span>${browsingCorrect ? `<span class="points-note">${attempt.mode === 'exam' ? '시험' : '복습'} ${attempt.items.indexOf(item) + 1}번</span>` : attempt.mode === 'exam' ? '<span class="points-note">한 문제 5점</span>' : ''}</div>
         <h1 id="question-title" tabindex="-1">${escape(question.prompt)}</h1>
         <div class="choices" role="group" aria-labelledby="question-title">
           ${item.order.map((choice, index) => {
@@ -81,10 +85,11 @@ function quizView() {
           }).join('')}
         </div>
         ${answered ? `<section class="feedback ${correct ? 'feedback-correct' : 'feedback-wrong'}" aria-labelledby="feedback-title">
-          <div class="feedback-copy"><h2 id="feedback-title" tabindex="-1">${correct ? '맞았어요!' : '이 상황은 이렇게 기억해요.'}</h2><p>${escape(question.explanation)}</p>
+          <div class="feedback-copy"><h2 id="feedback-title" tabindex="-1">${browsingCorrect ? '정답 해설' : correct ? '맞았어요!' : '이 상황은 이렇게 기억해요.'}</h2><p>${escape(question.explanation)}</p>
           <div class="source-links">${sources.map(source => `<a class="source-link" href="${source.url}" target="_blank" rel="noopener noreferrer">${escape(source.name)} ${icon('external', 13)}<span class="sr-only"> (새 창)</span></a>`).join('')}</div></div>
-          <button class="button next-button" data-action="next">${attempt.index === count - 1 ? '결과 보기' : '다음 문제'} ${icon('arrow', 22)}</button>
+          ${browsingCorrect ? '' : `<button class="button next-button" data-action="next">${index === count - 1 ? '결과 보기' : '다음 문제'} ${icon('arrow', 22)}</button>`}
         </section>` : `<p class="quiz-note">${attempt.mode === 'review' ? '헷갈렸던 상황을 다시 익혀 봐요.' : `${EXAM_LENGTH}문제 중 18문제를 맞히면 통과해요.`}</p>`}
+        ${browsingCorrect ? `<nav class="answer-review-controls" aria-label="맞은 문제 탐색"><button class="button button-secondary" data-action="correct-prev" ${index === 0 ? 'disabled' : ''}>${icon('back', 20)} 이전 문제</button><button class="button" data-action="${index === count - 1 ? 'correct-return' : 'correct-next'}">${index === count - 1 ? '다 봤어요' : '다음 문제'} ${icon('arrow', 20)}</button></nav>` : ''}
         ${!storageAvailable ? '<p class="storage-note" role="status">이 브라우저에서는 진행 상황이 저장되지 않아요. 창을 닫기 전에 끝까지 풀어 주세요.</p>' : ''}
       </div>
     </div>
@@ -116,7 +121,8 @@ function resultView() {
       <div class="result-details"><div class="details-heading"><span>${reviewing ? '다시 풀어본 상황' : '내가 익힌 운전 규칙'}</span><strong>${correct} / ${total} 정답</strong></div><ul>${categories}</ul></div>
       <div class="result-actions">
         ${mistakes.length ? `<button class="button" data-action="review">${icon('book', 22)} ${reviewing ? '남은 오답 다시 풀기' : '틀린 문제 복습하기'}<span class="count-pill">${mistakes.length}</span></button>` : ''}
-        <button class="button ${mistakes.length ? 'button-secondary' : ''}" data-action="retry">${icon('refresh', 22)} ${reviewing ? '새 시험 보기' : '다시 시험 보기'}</button>
+        <button class="button ${mistakes.length ? 'button-secondary' : ''}" data-action="correct-review" ${correct === 0 ? 'disabled' : ''}>${icon('check', 22)} 맞은 문제 다시 보기<span class="count-pill">${correct}</span></button>
+        <button class="button button-secondary" data-action="retry">${icon('refresh', 22)} ${reviewing ? '새 시험 보기' : '다시 시험 보기'}</button>
         ${reviewing && state.lastExam ? '<button class="text-button" data-action="exam-result">시험 결과로 돌아가기</button>' : ''}
       </div>
       <p class="result-footnote">일반 승용차 기준의 학습 퀴즈예요.<br>실제 도로에서는 현장 신호와 표지, 경찰의 지시를 따라요.</p>
@@ -126,8 +132,8 @@ function resultView() {
 
 function render({ focus = false, feedback = false } = {}) {
   document.body.dataset.screen = state.screen;
-  main.innerHTML = state.screen === 'home' ? homeView() : state.screen === 'quiz' ? quizView() : resultView();
-  const titles = { home: '선데이 드라이브 · 일본 운전 연습', quiz: `${state.attempt?.mode === 'review' ? '오답 복습' : '운전 연습'} · 선데이 드라이브`, result: '결과 · 선데이 드라이브' };
+  main.innerHTML = state.screen === 'home' ? homeView() : ['quiz', 'correct-review'].includes(state.screen) ? quizView() : resultView();
+  const titles = { home: '선데이 드라이브 · 일본 운전 연습', quiz: `${state.attempt?.mode === 'review' ? '오답 복습' : '운전 연습'} · 선데이 드라이브`, result: '결과 · 선데이 드라이브', 'correct-review': '맞은 문제 다시 보기 · 선데이 드라이브' };
   document.title = titles[state.screen];
   if (focus) {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -146,6 +152,7 @@ function render({ focus = false, feedback = false } = {}) {
 function beginExam() {
   const previous = state.lastExam || (state.attempt?.mode === 'exam' ? state.attempt : null);
   state.attempt = createExam(previous?.items.map(item => item.id) || []);
+  state.correctReviewIndex = 0;
   state.screen = 'quiz';
   save(); render({ focus: true });
 }
@@ -178,13 +185,27 @@ main.addEventListener('click', event => {
     case 'retry': beginExam(); break;
     case 'review':
       state.attempt = createReview(state.attempt);
+      state.correctReviewIndex = 0;
       state.screen = 'quiz'; save(); render({ focus: true }); break;
+    case 'correct-review':
+      if (!correctAnswers(state.attempt).length) break;
+      state.correctReviewIndex = 0;
+      state.screen = 'correct-review'; save(); render({ focus: true }); break;
+    case 'correct-prev':
+      if (state.screen !== 'correct-review' || state.correctReviewIndex === 0) break;
+      state.correctReviewIndex--; save(); render({ focus: true }); break;
+    case 'correct-next':
+      if (state.screen !== 'correct-review' || state.correctReviewIndex >= correctAnswers(state.attempt).length - 1) break;
+      state.correctReviewIndex++; save(); render({ focus: true }); break;
+    case 'correct-return':
+      state.correctReviewIndex = 0;
+      state.screen = 'result'; save(); render({ focus: true }); break;
     case 'exam-result':
       state.attempt = structuredClone(state.lastExam);
       state.screen = 'result'; save(); render({ focus: true }); break;
     case 'home':
       if (state.screen === 'quiz') { leaveDialog.returnValue = ''; leaveDialog.showModal(); }
-      else { state.screen = 'home'; save(); render({ focus: true }); }
+      else { state.screen = 'home'; state.correctReviewIndex = 0; save(); render({ focus: true }); }
       break;
   }
 });
