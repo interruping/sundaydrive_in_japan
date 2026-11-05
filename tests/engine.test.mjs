@@ -27,14 +27,15 @@ test('the expanded bank has unique scenarios, two choices, pictures and primary 
   assert.ok(QUESTIONS.filter(q => q.scene.nav).length >= 8);
 });
 
-test('every question in the expanded bank can be selected while an exam still has 20 items', () => {
+test('every question in the expanded bank can be selected in a 25-question exam', () => {
+  assert.equal(EXAM_LENGTH, 25);
   assert.equal(Object.values(EXAM_QUOTAS).reduce((sum, count) => sum + count, 0), EXAM_LENGTH);
   const seen = new Set();
   let seed = 20261105;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
   for (let i = 0; i < 500; i++) {
     const exam = createExam([], random);
-    assert.equal(exam.items.length, 20);
+    assert.equal(exam.items.length, 25);
     exam.items.forEach(item => seen.add(item.id));
   }
   assert.deepEqual([...seen].sort(), QUESTIONS.map(q => q.id).sort());
@@ -55,14 +56,14 @@ test('adding categories preserves a 60-question-bank exam and its correct-answer
   assert.equal(scoreAttempt(restoredReview.attempt).score, 90);
 });
 
-test('exam draws 20 unique questions covering every category and shuffles answer positions', () => {
+test('exam draws 25 unique questions covering every category and shuffles answer positions', () => {
   const firstChoices = new Set();
   const questionSets = new Set();
   for (let i = 0; i < 100; i++) {
     const exam = createExam();
     assert.ok(isValidAttempt(exam));
     assert.equal(exam.items.length, EXAM_LENGTH);
-    assert.equal(new Set(exam.items.map(item => item.id)).size, 20);
+    assert.equal(new Set(exam.items.map(item => item.id)).size, EXAM_LENGTH);
     for (const category of Object.keys(CATEGORIES)) {
       const count = exam.items.filter(item => QUESTION_BY_ID.get(item.id).category === category).length;
       assert.equal(count, EXAM_QUOTAS[category]);
@@ -92,25 +93,25 @@ test('a question cannot be skipped or answered twice', () => {
   assert.throws(() => answerCurrent(exam, 2), RangeError);
 });
 
-test('18 correct is 90 and passes; 17 correct is 85 and fails', () => {
-  assert.deepEqual(scoreAttempt(complete(createExam(), 18)), { correct: 18, total: 20, score: 90, passed: true });
-  assert.deepEqual(scoreAttempt(complete(createExam(), 17)), { correct: 17, total: 20, score: 85, passed: false });
-  assert.equal(scoreAttempt(complete(createExam(), 20)).score, 100);
+test('23 correct is 92 and passes; 22 correct is 88 and fails', () => {
+  assert.deepEqual(scoreAttempt(complete(createExam(), 23)), { correct: 23, total: 25, score: 92, passed: true });
+  assert.deepEqual(scoreAttempt(complete(createExam(), 22)), { correct: 22, total: 25, score: 88, passed: false });
+  assert.equal(scoreAttempt(complete(createExam(), 25)).score, 100);
   assert.equal(scoreAttempt(complete(createExam(), 0)).score, 0);
 });
 
 test('review contains only mistakes and leaves the original exam score untouched', () => {
-  const exam = complete(createExam(), 17);
+  const exam = complete(createExam(), 22);
   const snapshot = JSON.stringify(exam);
   const review = createReview(exam);
   assert.equal(review.mode, 'review');
   assert.equal(review.items.length, 3);
-  assert.deepEqual(new Set(review.items.map(item => item.id)), new Set(exam.items.slice(17).map(item => item.id)));
+  assert.deepEqual(new Set(review.items.map(item => item.id)), new Set(exam.items.slice(22).map(item => item.id)));
   assert.ok(review.items.every(item => item.answer === null));
   assert.ok(isValidAttempt(review));
   complete(review, 3);
   assert.equal(JSON.stringify(exam), snapshot);
-  assert.equal(createReview(complete(createExam(), 20)), null);
+  assert.equal(createReview(complete(createExam(), EXAM_LENGTH)), null);
 });
 
 test('reload restores the exact in-progress question, choice order, and revealed answer', () => {
@@ -118,7 +119,7 @@ test('reload restores the exact in-progress question, choice order, and revealed
   attempt = answerCurrent(attempt, 0);
   const state = { ...freshState(), screen: 'quiz', attempt };
   assert.deepEqual(restoreState(JSON.stringify(state)), state);
-  const exam = complete(createExam(), 18);
+  const exam = complete(createExam(), 23);
   const finished = { ...freshState(), screen: 'result', attempt: exam, lastExam: exam };
   assert.deepEqual(restoreState(JSON.stringify(finished)), finished);
 });
@@ -135,17 +136,30 @@ test('the lane scenario clarification preserves a preceding-version exam in prog
 });
 
 test('correct-answer browsing keeps original order, chosen answers, and the exam score', () => {
-  const exam = complete(createExam(), 18);
+  const exam = complete(createExam(), 23);
   const original = JSON.stringify(exam);
   const items = correctAnswers(exam);
-  assert.equal(items.length, 18);
-  assert.deepEqual(items, exam.items.slice(0, 18));
+  assert.equal(items.length, 23);
+  assert.deepEqual(items, exam.items.slice(0, 23));
   const browsing = { ...freshState(), screen: 'correct-review', attempt: exam, lastExam: exam, correctReviewIndex: 7 };
   assert.deepEqual(restoreState(JSON.stringify(browsing)), browsing);
   assert.equal(JSON.stringify(exam), original);
-  assert.equal(scoreAttempt(exam).score, 90);
+  assert.equal(scoreAttempt(exam).score, 92);
   assert.equal(correctAnswers(complete(createExam(), 0)).length, 0);
-  assert.equal(correctAnswers(complete(createExam(), 20)).length, 20);
+  assert.equal(correctAnswers(complete(createExam(), EXAM_LENGTH)).length, EXAM_LENGTH);
+});
+
+test('a full 25-question mistake review survives reload and every mistake can be answered', () => {
+  const exam = complete(createExam(), 0);
+  const review = createReview(exam);
+  assert.equal(review.items.length, 25);
+  const saved = { ...freshState(), screen: 'quiz', attempt: review, lastExam: exam };
+  assert.deepEqual(restoreState(JSON.stringify(saved)), saved);
+  assert.equal(scoreAttempt(complete(review, 25)).score, 100);
+  for (const length of [19, 21, 24, 26]) {
+    const invalid = { ...createExam(), items: QUESTIONS.slice(0, length).map(q => ({ id: q.id, order: [0, 1], answer: null })) };
+    assert.equal(isValidAttempt(invalid), false, `Reject incomplete ${length}-item exam`);
+  }
 });
 
 test('correct-answer browsing rejects missing answers and out-of-range positions without breaking legacy saves', () => {

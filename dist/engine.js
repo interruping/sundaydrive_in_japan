@@ -1,6 +1,6 @@
 import { BANK_VERSION, COMPATIBLE_BANK_VERSIONS, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID } from './questions.js';
 
-export const EXAM_LENGTH = 20;
+export const EXAM_LENGTH = 25;
 export const PASS_SCORE = 90;
 export const STORAGE_KEY = 'sunday-drive:progress';
 
@@ -98,7 +98,8 @@ export function freshState() {
 export function isValidAttempt(attempt) {
   if (!attempt || !['exam', 'review'].includes(attempt.mode) || !Array.isArray(attempt.items)) return false;
   const { items, index, mode } = attempt;
-  if (mode === 'exam' && items.length !== EXAM_LENGTH) return false;
+  // Keep completed and in-progress 20-question exams usable after the change.
+  if (mode === 'exam' && ![20, EXAM_LENGTH].includes(items.length)) return false;
   if (mode === 'review' && (items.length < 1 || items.length > EXAM_LENGTH)) return false;
   if (!Number.isInteger(index) || index < 0 || index > items.length) return false;
   if (new Set(items.map(item => item?.id)).size !== items.length) return false;

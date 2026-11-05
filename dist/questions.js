@@ -35,7 +35,7 @@ export const CATEGORIES = {
   lanes: '차로 선택과 합류', railway: '건널목의 신호 구분', priority: '교차로와 보행자 우선',
   roadside: '정차와 돌발 상황',
 };
-export const EXAM_QUOTAS = { signals: 4, turns: 4, entry: 3, lanes: 3, railway: 2, priority: 2, roadside: 2 };
+export const EXAM_QUOTAS = { signals: 5, turns: 4, entry: 4, lanes: 3, railway: 3, priority: 3, roadside: 3 };
 const directions = { left: '좌회전', right: '우회전', straight: '직진', uturn: '유턴' };
 const q = (id, category, prompt, choices, answer, explanation, source, scene) => ({
   id, category, prompt, choices, answer, explanation, source: Array.isArray(source) ? source[0] : source, sources: Array.isArray(source) ? source : [source], scene,

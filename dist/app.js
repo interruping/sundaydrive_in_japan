@@ -1,7 +1,7 @@
 import { heroArt } from './art.js';
 import { circularArrows } from './symbols.js';
 import { CATEGORIES, QUESTION_BY_ID, SOURCES } from './questions.js';
-import { STORAGE_KEY, EXAM_LENGTH, PASS_SCORE, createExam, createReview, correctAnswers, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
+import { STORAGE_KEY, PASS_SCORE, createExam, createReview, correctAnswers, wrongQuestions, answerCurrent, nextQuestion, scoreAttempt, freshState, restoreState } from './engine.js';
 
 const main = document.querySelector('#main');
 const leaveDialog = document.querySelector('#leave-dialog');
@@ -70,7 +70,7 @@ function quizView() {
         <picture class="question-picture"><source media="(max-width: 700px)" srcset="./scenes/${question.id}.mobile.svg"><img class="scene-art" src="./scenes/${question.id}.svg" alt="${escape(question.description)}" fetchpriority="high"></picture>
       </div>
       <div class="question-area">
-        <div class="question-intro"><span class="question-badge">${browsingCorrect ? '맞은 문제 다시 보기' : attempt.mode === 'review' ? '다시 한 번' : '어떻게 할까요?'}</span>${browsingCorrect ? `<span class="points-note">${attempt.mode === 'exam' ? '시험' : '복습'} ${attempt.items.indexOf(item) + 1}번</span>` : attempt.mode === 'exam' ? '<span class="points-note">한 문제 5점</span>' : ''}</div>
+        <div class="question-intro"><span class="question-badge">${browsingCorrect ? '맞은 문제 다시 보기' : attempt.mode === 'review' ? '다시 한 번' : '어떻게 할까요?'}</span>${browsingCorrect ? `<span class="points-note">${attempt.mode === 'exam' ? '시험' : '복습'} ${attempt.items.indexOf(item) + 1}번</span>` : attempt.mode === 'exam' ? `<span class="points-note">한 문제 ${100 / attempt.items.length}점</span>` : ''}</div>
         <h1 id="question-title" tabindex="-1">${escape(question.prompt)}</h1>
         <div class="choices" role="group" aria-labelledby="question-title">
           ${item.order.map((choice, index) => {
@@ -88,7 +88,7 @@ function quizView() {
           <div class="feedback-copy"><h2 id="feedback-title" tabindex="-1">${browsingCorrect ? '정답 해설' : correct ? '맞았어요!' : '이 상황은 이렇게 기억해요.'}</h2><p>${escape(question.explanation)}</p>
           <div class="source-links">${sources.map(source => `<a class="source-link" href="${source.url}" target="_blank" rel="noopener noreferrer">${escape(source.name)} ${icon('external', 13)}<span class="sr-only"> (새 창)</span></a>`).join('')}</div></div>
           ${browsingCorrect ? '' : `<button class="button next-button" data-action="next">${index === count - 1 ? '결과 보기' : '다음 문제'} ${icon('arrow', 22)}</button>`}
-        </section>` : `<p class="quiz-note">${attempt.mode === 'review' ? '헷갈렸던 상황을 다시 익혀 봐요.' : `${EXAM_LENGTH}문제 중 18문제를 맞히면 통과해요.`}</p>`}
+        </section>` : `<p class="quiz-note">${attempt.mode === 'review' ? '헷갈렸던 상황을 다시 익혀 봐요.' : `${attempt.items.length}문제 중 ${Math.ceil(attempt.items.length * PASS_SCORE / 100)}문제를 맞히면 통과해요.`}</p>`}
         ${browsingCorrect ? `<nav class="answer-review-controls" aria-label="맞은 문제 탐색"><button class="button button-secondary" data-action="correct-prev" ${index === 0 ? 'disabled' : ''}>${icon('back', 20)} 이전 문제</button><button class="button" data-action="${index === count - 1 ? 'correct-return' : 'correct-next'}">${index === count - 1 ? '다 봤어요' : '다음 문제'} ${icon('arrow', 20)}</button></nav>` : ''}
         ${!storageAvailable ? '<p class="storage-note" role="status">이 브라우저에서는 진행 상황이 저장되지 않아요. 창을 닫기 전에 끝까지 풀어 주세요.</p>' : ''}
       </div>

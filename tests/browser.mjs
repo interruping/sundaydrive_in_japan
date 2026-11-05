@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { QUESTION_BY_ID, QUESTIONS } from '../dist/questions.js';
-import { createExam, freshState, STORAGE_KEY } from '../dist/engine.js';
+import { createExam, freshState, STORAGE_KEY, EXAM_LENGTH } from '../dist/engine.js';
 
 const baseURL = process.env.BASE_URL || 'http://localhost:4173';
 const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true });
@@ -27,7 +27,8 @@ async function installExam() {
   return attempt;
 }
 async function finishWith(correctCount) {
-  for (let i = 0; i < 20; i++) {
+  const attempt = (await state()).attempt;
+  for (let i = attempt.index; i < attempt.items.length; i++) {
     const saved = await state();
     const question = QUESTION_BY_ID.get(saved.attempt.items[i].id);
     await page.locator(`[data-action="answer"][data-choice="${i < correctCount ? question.answer : 1 - question.answer}"]`).click();
@@ -51,6 +52,11 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await screenshot('home-mobile');
   await click('start');
+  assert.equal((await state()).attempt.items.length, 25);
+  assert.equal(await page.locator('.points-note').textContent(), '한 문제 4점');
+  assert.equal(await page.locator('.quiz-note').textContent(), '25문제 중 23문제를 맞히면 통과해요.');
+  assert.equal(await page.locator('[role="progressbar"]').getAttribute('aria-valuemax'), '25');
+  await screenshot('quiz-25-mobile');
   assert.equal(await page.locator('.choice:enabled').count(), 2);
   assert.equal(await page.locator('.scene-frame img.scene-art').count(), 1);
   await page.keyboard.press('1');
@@ -74,8 +80,8 @@ try {
   console.log('PASS start, keyboard answers, reload, pause and resume');
 
   const firstExam = await installExam();
-  await finishWith(18);
-  assert.equal(await page.locator('.score strong').textContent(), '90');
+  await finishWith(23);
+  assert.equal(await page.locator('.score strong').textContent(), '92');
   assert.equal(await page.locator('.result-label').textContent(), '통과했어요');
   await screenshot('pass-mobile');
   const result = await state();
@@ -102,12 +108,12 @@ try {
   await page.reload();
   assert.deepEqual(await state(), browsing);
   await click('correct-prev');
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 23; i++) {
     assert.equal(await page.locator('h1').textContent(), QUESTION_BY_ID.get(result.attempt.items[i].id).prompt);
-    if (i < 17) await click('correct-next');
+    if (i < 22) await click('correct-next');
   }
   await page.getByRole('button', { name: '다 봤어요', exact: true }).click();
-  assert.equal(await page.locator('.score strong').textContent(), '90');
+  assert.equal(await page.locator('.score strong').textContent(), '92');
   assert.deepEqual((await state()).attempt, result.attempt);
   console.log('PASS correct answers only, read-only explanations, navigation, reload, and original score');
   await click('review');
@@ -125,20 +131,20 @@ try {
   await click('correct-return');
   assert.equal(await page.locator('.score strong').textContent(), '2');
   await click('exam-result');
-  assert.equal(await page.locator('.score strong').textContent(), '90');
+  assert.equal(await page.locator('.score strong').textContent(), '92');
   await click('retry');
   assert.notDeepEqual((await state()).attempt.items.map(item => item.id).sort(), firstExam.items.map(item => item.id).sort());
-  console.log('PASS 90-point pass, mistake-only review, original result and fresh retry');
+  console.log('PASS 92-point pass, mistake-only review, original result and fresh retry');
 
   await installExam();
-  await finishWith(17);
-  assert.equal(await page.locator('.score strong').textContent(), '85');
+  await finishWith(22);
+  assert.equal(await page.locator('.score strong').textContent(), '88');
   assert.equal(await page.locator('.result-label').textContent(), '90점부터 통과예요');
   assert.equal(await page.locator('[data-action="retry"]').count(), 1);
   await screenshot('retry-mobile');
-  console.log('PASS 85-point retry');
+  console.log('PASS 88-point retry');
 
-  for (const correctCount of [0, 1, 20]) {
+  for (const correctCount of [0, 1, EXAM_LENGTH]) {
     const finished = createExam();
     finished.items.forEach((item, index) => { item.answer = index < correctCount ? QUESTION_BY_ID.get(item.id).answer : 1 - QUESTION_BY_ID.get(item.id).answer; });
     finished.index = finished.items.length;
@@ -149,16 +155,39 @@ try {
       await click('correct-review');
       assert.equal(await page.locator('.choice:enabled').count(), 0);
       await page.locator('.review-toolbar [data-action="correct-return"]').click();
-      assert.equal(await page.locator('.score strong').textContent(), String(correctCount * 5));
+      assert.equal(await page.locator('.score strong').textContent(), String(correctCount * 4));
     }
   }
   console.log('PASS zero, one, and all-correct result handling');
+
+  // Existing 20-question progress keeps its own total and five-point scoring.
+  const legacy = createExam();
+  legacy.items = legacy.items.slice(0, 20);
+  legacy.index = 5;
+  legacy.items.slice(0, 5).forEach(item => { item.answer = QUESTION_BY_ID.get(item.id).answer; });
+  const legacyState = { ...freshState(), screen: 'quiz', attempt: legacy };
+  await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: legacyState });
+  await page.reload();
+  assert.deepEqual(await state(), legacyState);
+  assert.match(await page.locator('.question-count strong').textContent(), /06\s*\/\s*20/);
+  assert.equal(await page.locator('.points-note').textContent(), '한 문제 5점');
+  assert.equal(await page.locator('.quiz-note').textContent(), '20문제 중 18문제를 맞히면 통과해요.');
+  await finishWith(18);
+  assert.equal(await page.locator('.score strong').textContent(), '90');
+  await click('correct-review');
+  assert.equal((await state()).attempt.items.length, 20);
+  await click('correct-return');
+  assert.equal(await page.locator('.score strong').textContent(), '90');
+  await click('retry');
+  assert.equal((await state()).attempt.items.length, 25);
+  assert.equal(await page.locator('.points-note').textContent(), '한 문제 4점');
+  console.log('PASS legacy 20-question resume, score and review; retry starts 25 questions');
 
   // Display each real scenario on mobile, including navigation, long prompts and feedback.
   const attempt = createExam();
   for (const question of QUESTIONS) {
     const fixture = structuredClone(attempt);
-    fixture.items = [{ id: question.id, order: [0, 1], answer: null }, ...fixture.items.filter(item => item.id !== question.id)].slice(0, 20);
+    fixture.items = [{ id: question.id, order: [0, 1], answer: null }, ...fixture.items.filter(item => item.id !== question.id)].slice(0, EXAM_LENGTH);
     await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: { ...freshState(), screen: 'quiz', attempt: fixture } });
     await page.reload();
     assert.equal(await page.locator('h1').textContent(), question.prompt);
