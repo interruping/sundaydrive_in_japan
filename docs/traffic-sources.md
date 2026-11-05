@@ -1,19 +1,20 @@
 # 시나리오와 법규 검토
 
-확인일: 2026-11-04. 일반 승용차로 일본을 운전하는 한국 운전자 대상. 점수는 학습 기준이며 운전 자격 인증이 아니다.
+확인일: 2026-11-05. 일반 승용차로 일본을 운전하는 한국 운전자 대상. 점수는 학습 기준이며 운전 자격 인증이 아니다.
 
 ## 문제 구성
 
-기본 상식 암기 문제를 제외하고, 여러 시각 조건을 함께 판단하는 60개 상황으로 구성했다.
+도로의 시각 조건을 판단하는 상황을 중심으로 74문항을 구성했다. 참고 블로그와 비교해 보완한 14문항의 근거는 [추가 검토 기록](blog-gap-review.md)에 정리했다.
 
 | 범주 | 문제 은행 | 한 시험 |
 | --- | ---: | ---: |
-| 복합 화살표·내비·표지와 신호 | 12 | 4 |
+| 복합 화살표·내비·표지와 신호 | 14 | 4 |
 | 실제 사례의 깊은 우회전 대기 위치 | 12 | 4 |
-| 중앙선·시설 진출입·횡단금지·인도 | 12 | 4 |
-| 차로별 방향·내비 충돌·합류·출구 | 8 | 3 |
-| 건널목 경보등·차량 신호·별도 교차로 | 8 | 3 |
-| 우선도로·가려진 횡단보도·노선버스·회전교차로 | 8 | 2 |
+| 중앙선·시설 진출입·횡단금지·인도 | 12 | 3 |
+| 차로별 방향·내비 충돌·합류·출구 | 10 | 3 |
+| 건널목 경보등·차량 신호·별도 교차로 | 8 | 2 |
+| 우선도로·일시정지·보행자·노선버스·회전교차로 | 10 | 2 |
+| 정차 규제·사고 대응·출발 전 조작 확인 | 8 | 2 |
 
 복합 화살표 2개, 깊은 우회전 대기 위치로 진입하는 초록불 상황과 진입 전 멈추는 적신호 상황, 황색 중앙선 너머 시설 진입이 가능한 기본 문제(entry-01), 횡단금지, 차로별 방향, 차량 신호가 있는/없는 건널목은 시험마다 포함한다.
 
@@ -26,7 +27,7 @@
 - 차로별 진행 방향: [NPA 안전운전 안내](https://www.npa.go.jp/bureau/traffic/anzen/poster/r8_leaflet_japan_anzenunten_jp.pdf)
 - 중앙선 의미: [JAF 중앙선 구분](https://jaf.or.jp/common/kuruma-qa/category-accident/subcategory-rule/faq175)
 - 시설 진출입과 우선관계: [도로교통법](https://laws.e-gov.go.jp/law/335AC0000000105), 25조·25조의2·36조
-- 차량 횡단금지: [NPA 규제 기준](https://www.npa.go.jp/laws/notification/koutuu/kisei/kisei20240726_5.pdf), 제38
+- 차량 횡단금지: [후쿠시마현 경찰 규제 기준](https://www.police.pref.fukushima.jp/03.tetuduki/-jyouhoukoukai/reiki_int/reiki_honbun/u244RG00002609.html), 제38
 - 같은 방향 차로 사이 황색선: [NPA 차로 변경 금지](https://www.npa.go.jp/bureau/traffic/seibi2/kisei/mokuteki/shinnrohennkoukinnshi/shinnrohennkoukinnshi.html)
 - 신호에 따른 정지 위치: [홋카이도 경찰](https://www.police.pref.hokkaido.lg.jp/info/koutuu/rule-gaikokujin/rule-japan.html). 이 자료의 오래된 기본속도 문구는 사용하지 않는다.
 - 실선 정지선과 안내선: [나가사키 경찰](https://www.police.pref.nagasaki.jp/police/kotsu-anzen/kotsu-kisei/site/teisisen/)
@@ -52,6 +53,6 @@
 
 `dist/scenes/<id>.svg`, `<id>.mobile.svg`는 각 문제에 대응하는 독립 파일이다. 공통 도형은 제작 도구로 재사용하지만, 앱은 문항별 완성 그림을 로드한다. 도로 구조·표지·차량 위치·신호 상태를 문항별로 구성한다.
 
-`npm run build:scenes`로 산출물을 만들고 `node tests/visual-audit.mjs`로 60개 그림·질문·선택지를 한꺼번에 대조할 검토 이미지를 만든다. 코드를 검사하는 것만으로 의미 일치를 검증했다고 보지 않는다. 변경한 그림은 모바일 크기에서도 직접 확인한다.
+`npm run build:scenes`로 산출물을 만들고 `node tests/visual-audit.mjs`로 모든 그림·질문·선택지를 대조할 검토 이미지를 만든다. `QUESTION_IDS`에 쉼표로 구분한 ID를 지정하면 변경 문항만 검토할 수 있다. 코드를 검사하는 것만으로 의미 일치를 검증했다고 보지 않는다. 변경한 그림은 모바일 크기에서도 직접 확인한다.
 
-문제 의미가 바뀌면 `BANK_VERSION`을 올린다. 이전 버전 저장 시험은 복구하지 않는다.
+문제 의미나 은행 구성이 바뀌면 `BANK_VERSION`을 올린다. ID·정답 인덱스를 유지한 문항 추가나 명확화는 `COMPATIBLE_BANK_VERSIONS`로 기존 시험과 복습을 복구한다. 기존 정답이 바뀌는 개정은 이전 저장을 호환 목록에서 제외한다.
