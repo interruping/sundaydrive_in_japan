@@ -81,3 +81,56 @@ test('destination entry diagrams distinguish center lines, signs, sidewalks and 
   assert.ok((await scene('entry-07')).includes('data-nav-layout="driveway"'));
   assert.ok((await scene('lane-07')).includes('data-nav-position="past-fork"'));
 });
+
+test('new sign scenarios show the visual conditions that change the answer', async () => {
+  for (const mobile of [false, true]) {
+    const straight = await scene('lane-09', mobile);
+    assert.match(straight, /data-sign="straight-only"/);
+    assert.match(straight, /data-vehicle-role="oncoming"/);
+    assert.doesNotMatch(straight, /data-signal-type="road"/);
+    const restricted = await scene('lane-10', mobile);
+    assert.match(restricted, /data-sign="straight-left"/);
+    assert.match(restricted, /data-navigation="right"/);
+    for (const id of ['signal-13', 'signal-14']) {
+      const svg = await scene(id, mobile);
+      assert.match(svg, /data-arrow="right" data-lit="true"/);
+      assert.match(svg, /data-navigation="uturn"/);
+      assert.equal(svg.includes('data-sign="no-uturn"'), id === 'signal-14');
+    }
+    const blind = await scene('priority-09', mobile);
+    assert.equal(count(blind, 'data-marking="stop-line"'), 1);
+    assert.match(blind, /data-occlusion="buildings"/);
+    assert.match(blind, /data-check-position="B"/);
+    assert.doesNotMatch(blind, /data-signal-type="road"/);
+    const pedestrian = await scene('priority-10', mobile);
+    assert.match(pedestrian, /data-sign="pedestrian-only"/);
+    assert.match(pedestrian, /data-vehicle-role="permitted"/);
+  }
+});
+
+test('roadside pictures distinguish waiting, dropoff, time limits, distance and injury', async () => {
+  for (const mobile of [false, true]) {
+    for (const [id, sign, passenger] of [
+      ['roadside-01', 'no-parking', 'immediate-dropoff'],
+      ['roadside-02', 'no-parking', 'waiting-in-shop'],
+      ['roadside-03', 'no-stopping', 'immediate-dropoff'],
+    ]) {
+      const svg = await scene(id, mobile);
+      assert.ok(svg.includes(`data-sign="${sign}"`));
+      assert.ok(svg.includes(`data-passenger-state="${passenger}"`));
+    }
+    const duringHours = await scene('roadside-04', mobile);
+    assert.match(duringHours, /data-restriction-hours="8–20"/);
+    assert.match(duringHours, /data-current-time="14:00"/);
+    const afterHours = await scene('roadside-05', mobile);
+    assert.match(afterHours, /data-current-time="21:00"/);
+    assert.match(afterHours, /data-crosswalk-distance-m="3"/);
+    assert.match(afterHours, /data-crosswalk="true"/);
+    assert.match(await scene('roadside-06', mobile), /data-damage-detail="scratch"/);
+    assert.doesNotMatch(await scene('roadside-06', mobile), /data-injured-person="true"/);
+    assert.match(await scene('roadside-07', mobile), /data-injured-person="true"/);
+    const controls = await scene('roadside-08', mobile);
+    assert.match(controls, /data-gear="P" data-speed="0"/);
+    assert.match(controls, /data-control="turn-signal" data-option="B"/);
+  }
+});

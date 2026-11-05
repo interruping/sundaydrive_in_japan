@@ -14,7 +14,12 @@ await mkdir('test-results', { recursive: true });
 
 const state = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
 const click = action => page.locator(`button[data-action="${action}"]`).click();
-const screenshot = name => page.screenshot({ path: `test-results/${name}.png`, fullPage: true });
+const screenshot = async name => {
+  // Capture from the top: Chromium can otherwise paint an offscreen fixed
+  // skip link inside a full-page screenshot taken after feedback scrolling.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await page.screenshot({ path: `test-results/${name}.png`, fullPage: true });
+};
 async function installExam() {
   const attempt = createExam();
   await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: { ...freshState(), screen: 'quiz', attempt } });
@@ -165,9 +170,21 @@ try {
       return { valid: !document.querySelector('parsererror'), loaded: img.naturalWidth > 0, own: document.querySelectorAll('[data-vehicle-role="own"]').length, id: document.documentElement.getAttribute('data-question-id') };
     });
     assert.deepEqual(graphic, { valid: true, loaded: true, own: 1, id: question.id });
-    if (['signal-04', 'signal-10', 'turn-01', 'turn-05', 'entry-01', 'entry-03', 'lane-01', 'railway-04', 'priority-03', 'priority-07', 'priority-08'].includes(question.id)) await screenshot(`${question.id}-mobile`);
+    if (question.scene.kind === 'road-rule') {
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+        await assertNoOverflow();
+        await page.locator('.scene-art').evaluate(img => img.decode());
+        if (width !== 320) await screenshot(`${question.id}-${width === 390 ? 'mobile' : 'desktop'}`);
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.locator(`[data-action="answer"][data-choice="${question.answer}"]`).click();
+      assert.equal(await page.locator('#feedback-title').textContent(), '맞았어요!');
+      await assertNoOverflow();
+      await screenshot(`${question.id}-feedback-mobile`);
+    } else if (['signal-04', 'signal-10', 'turn-01', 'turn-05', 'entry-01', 'entry-03', 'lane-01', 'railway-04', 'priority-03', 'priority-07', 'priority-08'].includes(question.id)) await screenshot(`${question.id}-mobile`);
   }
-  console.log('PASS all 60 illustrated scenarios at mobile size');
+  console.log(`PASS all ${QUESTIONS.length} illustrated scenarios; new questions at 320, 390 and 1440px with feedback`);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await installExam();

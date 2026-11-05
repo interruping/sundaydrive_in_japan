@@ -13,7 +13,9 @@ export const REQUIRED_TOPICS = [
   { category: 'entry', count: 1, matches: q => q.scene.sign === 'no-crossing' },
   { category: 'lanes', count: 1, matches: q => q.scene.kind === 'lane-junction' },
   { category: 'railway', count: 1, matches: q => q.scene.signalScope === 'crossing' },
-  { category: 'railway', count: 1, matches: q => !q.scene.signal },
+  // A signal beyond the railway belongs to a separate junction; it does not
+  // control the crossing or exempt its stop. Include that confusion here too.
+  { category: 'railway', count: 1, matches: q => q.scene.signalScope !== 'crossing' },
 ];
 
 const coversTopics = questions => REQUIRED_TOPICS.every(topic => questions.filter(q => q.category === topic.category && topic.matches(q)).length >= topic.count);

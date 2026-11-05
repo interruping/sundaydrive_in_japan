@@ -1,8 +1,8 @@
-// Original scenario questions, checked against the sources below on 2026-11-04.
-export const BANK_VERSION = '2026-11-04.5';
-// This revision clarifies lane-03 without changing any question IDs or answer
-// positions, so an in-progress exam from the preceding revision remains valid.
-export const COMPATIBLE_BANK_VERSIONS = ['2026-11-04.4'];
+// Original scenario questions, checked against the sources below on 2026-11-05.
+export const BANK_VERSION = '2026-11-05.1';
+// Added questions preserve existing IDs and answer positions. Keep saved exams
+// and both kinds of review; expanded category quotas apply to new exams only.
+export const COMPATIBLE_BANK_VERSIONS = ['2026-11-04.4', '2026-11-04.5'];
 export const SOURCES = {
   signals: { name: '일본 경찰청 · 신호와 도로표지', url: 'https://www.npa.go.jp/english/bureau/traffic/traffic-light_english.pdf' },
   rules: { name: '일본 경찰청 · 교통 안전 교칙', url: 'https://www.npa.go.jp/bureau/traffic/20241113kyousoku.pdf' },
@@ -21,13 +21,22 @@ export const SOURCES = {
   roundabout: { name: '히로시마 경찰 · 회전교차로 통행', url: 'https://www.pref.hiroshima.lg.jp/site/police/kanzyoukousaten.html' },
   merge: { name: 'JAF · 본선 합류', url: 'https://jaf.or.jp/common/kuruma-qa/category-drive/subcategory-technique/faq130' },
   exit: { name: 'JAF · 고속도로 출구를 놓친 경우', url: 'https://jaf.or.jp/common/kuruma-qa/category-trouble/subcategory-highway/faq111' },
+  signOrder: { name: '일본 도로표지령 · 진행방향과 시간 규제', url: 'https://laws.e-gov.go.jp/law/335M50004002003' },
+  uturn: { name: 'JAF Mate · 우회전 화살표와 유턴 금지', url: 'https://jafmate.jp/safety/traffic_rules_quiz_20230524.html' },
+  blindStop: { name: '가나가와현 경찰 · 시야가 가린 정지선', url: 'https://www.police.pref.kanagawa.jp/kotsu/kotsu_torishimari/mesf2002.html' },
+  parkingDefinition: { name: '오사카 경찰 · 주차와 잠깐의 정차 구분', url: 'https://www.police.pref.osaka.lg.jp/kotsu/tyusya/21011.html' },
+  parkingPlaces: { name: '오사카 경찰 · 횡단보도 주변 주정차 금지', url: 'https://www.police.pref.osaka.lg.jp/kotsu/tyusya/jogai/5980.html' },
+  rentalDamage: { name: '일본 국민생활센터 · 작은 렌터카 흠집도 연락', url: 'https://www.kokusen.go.jp/news/data/n-20250328_1.html' },
+  accident: { name: '홋카이도 · 사고 시 구호와 119·110 신고', url: 'https://www.pref.hokkaido.lg.jp/ks/cak/kat/safety-drive/accident.html' },
+  controls: { name: '토요타 · 출발 전 방향지시등과 와이퍼 확인', url: 'https://toyota.jp/after_service/tenken/daily/step3/detail/' },
 };
 export const CATEGORIES = {
   signals: '복합 신호와 내비', turns: '우회전과 정지 위치', entry: '중앙선과 목적지 진입',
-  lanes: '차로 선택과 합류', railway: '건널목의 신호 구분', priority: '교차로의 우선순위',
+  lanes: '차로 선택과 합류', railway: '건널목의 신호 구분', priority: '교차로와 보행자 우선',
+  roadside: '정차와 돌발 상황',
 };
-export const EXAM_QUOTAS = { signals: 4, turns: 4, entry: 4, lanes: 3, railway: 3, priority: 2 };
-const directions = { left: '좌회전', right: '우회전', straight: '직진' };
+export const EXAM_QUOTAS = { signals: 4, turns: 4, entry: 3, lanes: 3, railway: 2, priority: 2, roadside: 2 };
+const directions = { left: '좌회전', right: '우회전', straight: '직진', uturn: '유턴' };
 const q = (id, category, prompt, choices, answer, explanation, source, scene) => ({
   id, category, prompt, choices, answer, explanation, source: Array.isArray(source) ? source[0] : source, sources: Array.isArray(source) ? source : [source], scene,
   description: [prompt, scene.label, scene.extraLabel,
@@ -48,6 +57,7 @@ const deepTurn = (extra = {}) => ({ kind: 'deep-intersection', feature: 'deep-ri
 const entry = (extra = {}) => ({ kind: 'entry', feature: 'yellow-entry', centerLine: 'yellow', destinationSide: 'right', ...extra });
 const lane = (extra = {}) => ({ kind: 'lane-junction', myLane: 'left', laneDirections: [['straight'], ['right']], boundary: 'yellow', signal: 'green', route: 'right', nav: true, ...extra });
 const rail = (extra = {}) => ({ kind: 'rail', feature: 'rail-open', gate: 'open', alarm: 'off', stage: 'approaching', ...extra });
+const supplement = (feature, extra = {}) => ({ kind: 'road-rule', feature, ...extra });
 
 export const QUESTIONS = [
   q('signal-01', 'signals', '내비는 우회전. 켜진 화살표로 갈 수 있을까요?',
@@ -235,5 +245,48 @@ export const QUESTIONS = [
   q('priority-08', 'priority', '회전교차로에서 목적지가 오른쪽에 있어요.',
     ['가까운 오른쪽으로 바로 꺾어 가요', '시계 방향으로 돌아 해당 출구로 나가요'], 1,
     '일본의 회전교차로는 시계 방향으로 돌아요. 내비 목적지가 오른쪽이어도 반대 방향으로 바로 꺾지 않아요.', 'roundabout', { kind: 'priority', feature: 'roundabout-route', route: 'right', nav: true }),
+
+  q('lane-09', 'lanes', '파란 원형 화살표가 있는데 맞은편에서 차가 와요.',
+    ['일방통행이니 도로 가운데로 가요', '왼쪽 차로를 지키며 직진해요'], 1,
+    '이 원형 표지는 교차로에서 직진만 허용한다는 뜻이에요. 도로 전체가 일방통행이라는 뜻은 아니므로 맞은편 차가 올 수 있어요. 사각형 일방통행 표지와 구분하고 왼쪽 차로를 지켜요.', ['signOrder', 'guide'], supplement('mandatory-straight', { label: '왕복 2차로. 원형 직진 표지와 맞은편 차량. 신호등 없음.' })),
+  q('lane-10', 'lanes', '초록불이고 내비는 우회전. 파란 표지도 살펴볼까요?',
+    ['표지가 허용한 직진으로 가고 경로를 다시 잡아요', '초록불이니 내비를 따라 우회전해요'], 0,
+    '파란 원형 표지의 화살표가 직진과 좌회전만 허용해요. 초록 신호나 내비 안내가 이 방향 제한을 없애지는 않아요. 여기서는 직진한 뒤 안전하게 경로를 다시 잡을 수 있어요.', ['signOrder', 'guide'], supplement('mandatory-turn', { signal: 'green', nav: true, route: 'right', label: '직진·좌회전만 허용하는 원형 표지. 도로는 네 방향으로 열려 있음.' })),
+  q('signal-13', 'signals', '오른쪽 초록 화살표가 켜졌어요. 내비는 유턴이에요.',
+    ['유턴 신호가 따로 켜질 때까지 기다려요', '다른 통행을 방해하지 않는지 확인하고 유턴해요'], 1,
+    '일반 승용차는 녹색 오른쪽 화살표에 우회전뿐 아니라 유턴도 할 수 있어요. 그림에는 유턴 금지 표지·노면 표시가 없고 회전 공간이 비어 있어요. 다른 차량과 보행자의 통행을 방해하지 않을 때만 유턴해요.', ['uturn', 'rules', 'law'], supplement('uturn-allowed', { signal: 'red', arrows: ['right'], nav: true, route: 'uturn', label: '넓은 교차로. 유턴 금지 표지·노면 표시와 접근 차량 없음.' })),
+  q('signal-14', 'signals', '우회전 화살표와 이 표지가 함께 있어요. 유턴할까요?',
+    ['여기서는 유턴하지 않고 경로를 다시 잡아요', '우회전 화살표가 켜졌으니 유턴해요'], 0,
+    '그림의 빨간 테두리 표지는 유턴 금지예요. 녹색 오른쪽 화살표는 유턴 금지 규제를 해제하지 않아요. 유턴 없이 허용된 방향으로 진행하고 다른 경로를 찾아요.', 'uturn', supplement('uturn-prohibited', { signal: 'red', arrows: ['right'], sign: 'no-uturn', nav: true, route: 'uturn' })),
+  q('priority-09', 'priority', '정지선 A에서는 건물 때문에 옆 도로가 잘 안 보여요.',
+    ['A에서 완전히 멈춘 뒤, 서행해 시야를 확보해요', 'A를 지나 잘 보이는 B에서만 멈춰요'], 0,
+    '일시정지 표지가 있으므로 먼저 A 정지선 직전에 완전히 멈춰요. 거기서 시야가 확보되지 않으면 서행하며 확인하고, 필요하면 B 부근에서 다시 멈춰요. 잘 보이는 곳에서 멈췄다고 정지선 앞 정지를 생략할 수는 없어요.', 'blindStop', supplement('blind-stop', { label: '신호 없는 T자 교차로. 내 차는 A 정지선 전. 건물이 시야를 가리고 B는 앞쪽 확인 위치이며 정지선은 아님.' })),
+  q('priority-10', 'priority', '보행자 전용도로로 앞차가 들어갔어요. 내비도 직진이에요.',
+    ['앞차를 따라 천천히 들어가요', '통행 허가가 없는 내 차는 다른 길로 가요'], 1,
+    '앞차는 통행 허가를 받은 차량이고, 내 렌터카는 허가가 없어요. 보행자 전용도로에는 내비가 안내하거나 다른 차가 들어가더라도 임의로 진입할 수 없어요. 사람을 피해서 서행하는 것만으로 통행이 허용되지는 않아요.', ['signOrder', 'law'], supplement('pedestrian-only', { nav: true, route: 'straight', label: '보행자 전용 표지. 앞차에는 통행 허가가 있고 내 렌터카에는 없음.' })),
+  q('roadside-01', 'roadside', '동승자가 지금 내려요. 이 표지 아래 잠깐 세워도 될까요?',
+    ['운전석에 남아 안전하게 하차만 시키고 출발해요', '이 표지는 잠깐의 하차도 모두 금지해요'], 0,
+    '빨간 사선 한 줄은 주차금지예요. 운전자가 바로 운전할 수 있는 상태에서 사람을 내려주는 잠깐의 정차는 주차와 구분해요. 그림처럼 다른 주정차 금지 사유가 없고 통행을 방해하지 않는 곳에서, 안전을 확인하고 하차만 시켜요.', ['parkingDefinition', 'law'], supplement('parking-dropoff', { label: '주차금지 표지. 운전자는 차 안, 동승자는 바로 하차. 교차로·횡단보도·정류장·출입구가 없는 넓은 직선 도로.' })),
+  q('roadside-02', 'roadside', '친구가 2분 뒤 나와요. 운전석에 앉아 기다릴까요?',
+    ['5분 미만이고 차 안에 있으니 기다려요', '이곳에서는 기다리지 않고 주차 가능한 곳으로 가요'], 1,
+    '주차금지 구간에서 사람이 나오기를 계속 기다리는 것은 주차에 해당해요. 운전석에 있거나 2분만 기다린다고 허용되지 않아요. 이미 옆에 있는 사람이 바로 타고 내리는 정차와는 달라요.', 'parkingDefinition', supplement('parking-wait', { label: '주차금지 표지. 친구는 아직 가게 안. 휴대전화에 2분 뒤 나온다는 메시지. 운전자는 차 안.' })),
+  q('roadside-03', 'roadside', '동승자만 바로 내려요. 빨간 X 표지 아래 세울까요?',
+    ['잠깐의 하차도 피하고 정차 가능한 곳으로 가요', '운전자가 차 안에 있으면 바로 내려줘도 돼요'], 0,
+    '빨간 X 표지는 주차와 정차를 모두 금지해요. 사람을 내려주기 위한 짧은 정차도 허용되지 않아요. 사고 방지나 신호에 따른 정지와는 구분하고, 승하차는 정차 가능한 장소에서 해요.', ['signOrder', 'law'], supplement('stopping-dropoff', { label: '주정차금지 표지. 동승자가 하차하려 하고 운전자는 차 안.' })),
+  q('roadside-04', 'roadside', '오후 2시예요. 8–20 표지 아래 주차하고 가게에 갈까요?',
+    ['8–20시는 주차 허용 시간이니 들어가요', '지금은 주차 금지 시간이라 다른 주차장을 찾아요'], 1,
+    '주차금지 표지의 8–20은 오전 8시부터 오후 8시까지 그 금지가 적용된다는 뜻이에요. 현재 14시는 금지 시간 안이에요. 주차할 수 있는 시간으로 거꾸로 읽지 않아요.', 'signOrder', supplement('parking-hours', { label: '주차금지 표지와 8–20 보조표지. 현재 시각 14:00.' })),
+  q('roadside-05', 'roadside', '밤 9시. 8–20 규제는 끝났는데 횡단보도 3m 앞이에요.',
+    ['이 위치에는 주차하지 않아요', '표지의 금지 시간이 끝났으니 주차해요'], 0,
+    '시간 표지에 따른 주차금지가 끝나도 다른 규제는 확인해야 해요. 횡단보도와 그 앞뒤 5m 이내는 원칙적으로 주정차 금지예요. 그림에는 별도의 허용 표시가 없으므로 3m 앞에 주차할 수 없어요.', ['parkingPlaces', 'signOrder'], supplement('parking-crosswalk', { label: '주차금지 8–20. 현재 21:00. 차 앞부분에서 횡단보도 가까운 가장자리까지 3m. 별도 주차 허용 표시 없음.' })),
+  q('roadside-06', 'roadside', '렌터카로 기둥을 살짝 긁었어요. 다친 사람은 없어요.',
+    ['작은 흠집이니 반납할 때만 말해요', '안전을 확보하고 경찰과 렌터카 회사에 바로 연락해요'], 1,
+    '작은 흠집이나 상대 차량이 없는 사고라도 현장에서 경찰(110)과 렌터카 회사에 연락해요. 임의로 판단해 신고를 생략하면 보험·보상이 적용되지 않을 수 있어요. 면책 상품 가입이 모든 비용을 무조건 없애는 것도 아니에요.', 'rentalDamage', supplement('minor-collision', { label: '주차장 기둥에 내 차가 긁힘. 흠집 확대 그림. 부상자 없음.' })),
+  q('roadside-07', 'roadside', '사고 후 안전한 곳에 멈췄어요. 다친 사람이 있으면요?',
+    ['구호하고 119로 구급 요청부터 해요', '렌터카 회사에 수리비부터 물어봐요'], 0,
+    '사고 후에는 추가 사고를 막고 다친 사람의 구호를 우선해요. 구급 요청은 119, 경찰 신고는 110이에요. 부상자 대응과 경찰 신고를 진행하고 렌터카 회사에도 연락해요.', ['accident', 'rentalDamage'], supplement('injury-collision', { label: '사고 차량 두 대가 안전한 곳에 정차. 길 가장자리에 다친 사람이 앉아 있음.' })),
+  q('roadside-08', 'roadside', '출발 전 레버를 확인해요. 방향지시등은 어느 쪽일까요?',
+    ['와이퍼 그림이 있는 A 레버예요', '좌우 화살표가 있는 B 레버예요'], 1,
+    '그림의 A는 와이퍼, B는 방향지시등 레버예요. 한국에서 쓰던 손의 위치만 기억해 조작하면 와이퍼가 켜질 수 있어요. 레버의 위치와 조작 방식은 차종에 따라 다를 수 있으므로 출발 전 정차 상태에서 확인해요.', 'controls', supplement('parked-controls', { label: '내 차 운전석 확대. P단, 속도 0. 왼쪽 A에는 와이퍼 그림, 오른쪽 B에는 좌우 화살표.' })),
 ];
 export const QUESTION_BY_ID = new Map(QUESTIONS.map(question => [question.id, question]));

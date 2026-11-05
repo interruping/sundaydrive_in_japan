@@ -12,19 +12,47 @@ function complete(attempt, rightCount) {
   return result;
 }
 
-test('60 distinct scenarios each have a picture, two choices, explanation and an official source', () => {
-  assert.equal(QUESTIONS.length, 60);
-  assert.equal(QUESTION_BY_ID.size, 60);
-  assert.equal(new Set(QUESTIONS.map(q => q.prompt)).size, 60);
+test('the expanded bank has unique scenarios, two choices, pictures and primary sources', () => {
+  assert.ok(QUESTIONS.length > 60);
+  assert.equal(QUESTION_BY_ID.size, QUESTIONS.length);
+  assert.equal(new Set(QUESTIONS.map(q => q.prompt)).size, QUESTIONS.length);
   for (const q of QUESTIONS) {
     assert.ok(CATEGORIES[q.category]);
     assert.equal(q.choices.length, 2);
     assert.notEqual(q.choices[0], q.choices[1]);
     assert.ok([0, 1].includes(q.answer));
     assert.ok(q.scene.kind && q.description && q.explanation);
-    for (const key of q.sources) assert.match(SOURCES[key].url, /^https:\/\/(www\.npa\.go\.jp|www\.qsr\.mlit\.go\.jp|www\.police\.pref\.[a-z]+\.(jp|lg\.jp)|www\.pref\.hiroshima\.lg\.jp|laws\.e-gov\.go\.jp|jaf\.or\.jp|jafmate\.jp)\//);
+    for (const key of q.sources) assert.match(SOURCES[key].url, /^https:\/\/(www\.npa\.go\.jp|www\.qsr\.mlit\.go\.jp|www\.police\.pref\.[a-z]+\.(jp|lg\.jp)|www\.pref\.(hiroshima|hokkaido)\.lg\.jp|laws\.e-gov\.go\.jp|jaf\.or\.jp|jafmate\.jp|www\.kokusen\.go\.jp|toyota\.jp)\//);
   }
   assert.ok(QUESTIONS.filter(q => q.scene.nav).length >= 8);
+});
+
+test('every question in the expanded bank can be selected while an exam still has 20 items', () => {
+  assert.equal(Object.values(EXAM_QUOTAS).reduce((sum, count) => sum + count, 0), EXAM_LENGTH);
+  const seen = new Set();
+  let seed = 20261105;
+  const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  for (let i = 0; i < 500; i++) {
+    const exam = createExam([], random);
+    assert.equal(exam.items.length, 20);
+    exam.items.forEach(item => seen.add(item.id));
+  }
+  assert.deepEqual([...seen].sort(), QUESTIONS.map(q => q.id).sort());
+});
+
+test('adding categories preserves a 60-question-bank exam and its correct-answer review', () => {
+  const ids = ['signal-01', 'signal-02', 'signal-07', 'signal-12', 'turn-01', 'turn-02', 'turn-04', 'turn-08', 'entry-01', 'entry-03', 'entry-04', 'entry-10', 'lane-01', 'lane-03', 'lane-07', 'railway-01', 'railway-03', 'railway-07', 'priority-01', 'priority-07'];
+  const attempt = { mode: 'exam', index: 0, items: ids.map(id => ({ id, order: [0, 1], answer: null })) };
+  const inProgress = nextQuestion(answerCurrent(attempt, QUESTION_BY_ID.get(ids[0]).answer));
+  const saved = { ...freshState(), bankVersion: '2026-11-04.5', screen: 'quiz', attempt: inProgress };
+  const restored = restoreState(JSON.stringify(saved));
+  assert.deepEqual(restored.attempt, inProgress);
+  const finished = complete(attempt, 18);
+  const review = { ...saved, screen: 'correct-review', attempt: finished, lastExam: finished, correctReviewIndex: 6 };
+  const restoredReview = restoreState(JSON.stringify(review));
+  assert.deepEqual(restoredReview.attempt, finished);
+  assert.equal(restoredReview.correctReviewIndex, 6);
+  assert.equal(scoreAttempt(restoredReview.attempt).score, 90);
 });
 
 test('exam draws 20 unique questions covering every category and shuffles answer positions', () => {
