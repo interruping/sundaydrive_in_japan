@@ -34,7 +34,7 @@ function laneArrow(x, y, directions) {
 
 // MLIT official sign atlas, 312 / 313 / 303:
 // https://www.skr.mlit.go.jp/road/hyousiki/h_annai/roadsign/files/dourohyousikiichiran.pdf
-function sign(type, x, y) {
+function sign(type, x, y, poleLength = 61) {
   let symbol;
   if (type === 'no-entry') symbol = `<circle r="38" fill="${C.red}"/><path d="M-25 0H25" stroke="${C.white}" stroke-width="13"/>`;
   else {
@@ -43,7 +43,7 @@ function sign(type, x, y) {
       : '<path d="M-13 24V-8a13 13 0 0 1 26 0V15m-9 -10 9 10 9 -10" fill="none" stroke="#3c608b" stroke-width="7" stroke-linejoin="round"/>';
     symbol = `<circle r="38" fill="${C.white}" stroke="${C.red}" stroke-width="8"/>${inner}<path d="M-26 27L26 -27" stroke="${C.red}" stroke-width="8"/>`;
   }
-  return `<g data-sign="${type}" transform="translate(${x} ${y})"><path d="M0 33v61" stroke="#839c8c" stroke-width="7"/>${symbol}</g>`;
+  return `<g data-sign="${type}" transform="translate(${x} ${y})"><path d="M0 33v${poleLength}" stroke="#839c8c" stroke-width="7"/>${symbol}</g>`;
 }
 
 function signal(s) {
@@ -93,7 +93,9 @@ export function entryScene(s, description = '') {
   const ownX = left + 39, oppositeX = center + 39;
   const feature = s.feature || 'yellow-entry', roadside = !['obstacle', 'overtake'].includes(feature);
   const isLeft = s.destinationSide === 'left', exit = feature === 'parking-exit';
-  const openingY = 229 + (variant % 2) * 18, openingBottom = openingY + 83;
+  // Leave room before the left driveway for the sign on our approach's roadside.
+  const leftAccessWithSign = isLeft && !exit && s.sign === 'no-crossing';
+  const openingY = leftAccessWithSign ? 200 : 229 + (variant % 2) * 18, openingBottom = openingY + 83;
   const roadColor = s.centerLine === 'white-dashed' ? C.white : C.yellow;
   let out = `<g data-road-layout="two-way-two-lane" data-center-line="${s.centerLine || 'yellow'}" data-has-sidewalk="${Boolean(s.sidewalk)}"><rect x="${left}" width="156" height="430" fill="${C.road}"/>${line(`M${center} 0V430`, roadColor, 5, s.centerLine === 'white-dashed' ? 'stroke-dasharray="17 13" data-centerline="white-dashed"' : 'data-centerline="yellow-solid"')}</g>`;
   const edge = (x, gap) => line(gap ? `M${x} 0V${openingY}M${x} ${openingBottom}V430` : `M${x} 0V430`);
@@ -102,7 +104,7 @@ export function entryScene(s, description = '') {
   if (roadside) {
     const plotX = isLeft ? 7 : right + 32, plotW = isLeft ? left - 37 : 553 - plotX;
     const driveX = isLeft ? plotX : right, driveW = isLeft ? left - plotX : 553 - right;
-    out += `<g data-driveway="${isLeft ? 'left' : 'right'}"><rect x="${plotX}" y="${openingY - 22}" width="${plotW}" height="${exit ? 170 : 141}" rx="5" fill="#d1d5c6"/><rect x="${driveX}" y="${openingY}" width="${driveW}" height="83" fill="#c9cfc1"/>${line(`M${driveX} ${openingY}h${driveW}M${driveX} ${openingBottom}h${driveW}`, '#a9b7a6', 2)}${store(isLeft ? 20 : right + 71, 138 + (variant % 2) * 18, 112, exit ? '주차장' : '목적지')}<path d="M${plotX + 8} ${openingBottom + 7}v28h46v-28m13 0v28h46v-28" stroke="${C.white}" stroke-width="2.5" fill="none"/></g>`;
+    out += `<g data-driveway="${isLeft ? 'left' : 'right'}"><rect x="${plotX}" y="${openingY - 22}" width="${plotW}" height="${exit ? 170 : 141}" rx="5" fill="#d1d5c6"/><rect x="${driveX}" y="${openingY}" width="${driveW}" height="83" fill="#c9cfc1"/>${line(`M${driveX} ${openingY}h${driveW}M${driveX} ${openingBottom}h${driveW}`, '#a9b7a6', 2)}${store(isLeft ? 20 : right + 71, openingY - 91, 112, exit ? '주차장' : '목적지')}<path d="M${plotX + 8} ${openingBottom + 7}v28h46v-28m13 0v28h46v-28" stroke="${C.white}" stroke-width="2.5" fill="none"/></g>`;
     if (s.sidewalk) {
       const sidewalkX = isLeft ? left - 31 : right;
       const sidewalkLabelX = isLeft ? sidewalkX - 68 : sidewalkX + 43;
@@ -123,7 +125,8 @@ export function entryScene(s, description = '') {
     const oncomingY = feature === 'obstacle' ? 226 : s.pedestrian ? 145 : 164;
     out += car(oppositeX, oncomingY, 180, 'oncoming') + label(21, 25, '맞은편 차', oppositeX - 23, oncomingY - 7, 'left');
   }
-  if (s.sign) out += sign(s.sign, s.sign === 'no-entry' ? (isLeft ? left - 48 : right + 50) : isLeft ? 461 : 87, s.sign === 'no-entry' ? openingY + 15 : 91);
+  if (leftAccessWithSign) out += sign(s.sign, left - 60, 363, 29);
+  else if (s.sign) out += sign(s.sign, s.sign === 'no-entry' ? (isLeft ? left - 48 : right + 50) : isLeft ? 461 : 87, s.sign === 'no-entry' ? openingY + 15 : 91);
 
   if (exit) {
     const ownY = openingY + 41, ownExitX = isLeft ? left - 84 : right + 85;
@@ -133,7 +136,9 @@ export function entryScene(s, description = '') {
     const targetX = down ? oppositeX : ownX, targetY = down ? 369 : 126;
     out += `<g data-intended-route="${esc(s.exitRoute || 'right')}">${line(`M${ownExitX + (isLeft ? 41 : -41)} ${ownY}H${targetX + (isLeft ? -16 : 16)}Q${targetX} ${ownY} ${targetX} ${ownY + (down ? 20 : -20)}V${targetY}`, C.coral, 3.5, 'stroke-dasharray="7 7"')}${arrow(targetX, targetY, 'straight', C.coral, down ? -.5 : .5)}</g>`;
   } else {
-    out += car(ownX, 365) + label(14, 348, '내 차', ownX - 24, 365, 'left');
+    out += car(ownX, 365) + (leftAccessWithSign
+      ? label(right + 32, 348, '내 차', ownX + 24, 365)
+      : label(14, 348, '내 차', ownX - 24, 365, 'left'));
   }
   return svg(s, description, out);
 }
