@@ -1,10 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { QUESTIONS, RETIRED_QUESTIONS } from '../dist/questions.js';
 
 const scene = (id, mobile = false) => readFile(new URL(`../dist/scenes/${id}${mobile ? '.mobile' : ''}.svg`, import.meta.url), 'utf8');
 const count = (svg, attribute) => svg.split(attribute).length - 1;
+
+test('crossing and U-turn prohibitions use the unmodified NPA sign artwork in every layout', async () => {
+  // Independent reference hashes of PNGs extracted from NPA PDF page 5,
+  // image objects 29 (312) and 30 (313). Do not replace these with hand-drawn
+  // turn arrows: the left branch, slash direction and layering are meaningful.
+  const expected = {
+    'no-crossing': { code: '312', hash: '014e0a6323316cef4154708d61897b2ae36d4e54afd6a865551666acfba171dc' },
+    'no-uturn': { code: '313', hash: '5ba1dce856512771d4be961bf96a65a6a7e4b6aacf14e5417345e51d39831a7d' },
+  };
+  for (const q of [...QUESTIONS, ...RETIRED_QUESTIONS].filter(q => expected[q.scene.sign])) {
+    for (const mobile of [false, true]) {
+      const svg = await scene(q.id, mobile);
+      const reference = expected[q.scene.sign];
+      assert.equal(count(svg, `data-official-sign="${reference.code}"`), 1, q.id);
+      const image = svg.match(/href="data:image\/png;base64,([A-Za-z0-9+/=]+)"/);
+      assert.ok(image, `${q.id}: embed source artwork in the standalone SVG`);
+      assert.equal(createHash('sha256').update(Buffer.from(image[1], 'base64')).digest('hex'), reference.hash, q.id);
+    }
+  }
+});
 
 test('every question has a separate valid-looking asset and exactly one directly identified own car', async () => {
   for (const q of [...QUESTIONS, ...RETIRED_QUESTIONS]) for (const mobile of [false, true]) {

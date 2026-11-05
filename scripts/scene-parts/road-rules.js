@@ -1,5 +1,6 @@
 // Dedicated compositions for signs, roadside stops and incidents. These are
 // original diagrams, not copies of the reference blog's photographs.
+import { vehicleProhibitionSign } from '../../dist/traffic-signs.js';
 const C = { ink: '#173e38', teal: '#347b69', grass: '#d6e3ce', road: '#b8c7bc', white: '#fffef7', coral: '#e67855', blue: '#bad6df', sign: '#286a9c', red: '#d95748', yellow: '#efbd4d', pavement: '#e5dcc4' };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 const text = (x, y, value, size = 21, color = C.ink, anchor = 'middle') => `<text x="${x}" y="${y}" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="${size}" font-weight="750" text-anchor="${anchor}" fill="${color}">${esc(value)}</text>`;
@@ -31,7 +32,7 @@ function sign(type, x, y, time = '') {
     symbol = circle(0, 0, 44, C.sign, `stroke="${C.red}" stroke-width="9"`) + path('M-29 -29L29 29', C.red, 9);
     if (type === 'no-stopping') symbol += path('M-29 29L29 -29', C.red, 9);
   } else if (type === 'no-uturn') {
-    symbol = circle(0, 0, 43, C.white, `stroke="${C.red}" stroke-width="8"`) + path('M-15 25V-8a15 15 0 0 1 30 0V16m-10 -10 10 10 10 -10', C.sign, 7) + path('M-29 29L29 -29', C.red, 8);
+    symbol = vehicleProhibitionSign(type, 47);
   } else {
     symbol = circle(0, 0, 44, C.sign, `stroke="${C.white}" stroke-width="2"`);
     if (type === 'pedestrian-only') {

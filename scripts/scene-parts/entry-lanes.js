@@ -1,5 +1,6 @@
 // Each call produces a standalone, question-specific image. Road markings are
 // exclusively derived from the scene's road rules, never from its navigation.
+import { vehicleProhibitionSign } from '../../dist/traffic-signs.js';
 const C = { ink: '#173e38', teal: '#347b69', grass: '#d6e3ce', road: '#b8c7bc', white: '#fffef7', coral: '#e67855', blue: '#bad6df', red: '#d95748', yellow: '#efbd4d' };
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 const text = (x, y, s, size = 21, extra = '') => `<text x="${x}" y="${y}" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="${size}" font-weight="750" fill="${C.ink}" ${extra}>${esc(s)}</text>`;
@@ -32,17 +33,10 @@ function laneArrow(x, y, directions) {
   return `<g data-road-marking="lane-direction" data-directions="${directions.join(',')}">${p}</g>`;
 }
 
-// MLIT official sign atlas, 312 / 313 / 303:
-// https://www.skr.mlit.go.jp/road/hyousiki/h_annai/roadsign/files/dourohyousikiichiran.pdf
 function sign(type, x, y, poleLength = 61) {
   let symbol;
   if (type === 'no-entry') symbol = `<circle r="38" fill="${C.red}"/><path d="M-25 0H25" stroke="${C.white}" stroke-width="13"/>`;
-  else {
-    const inner = type === 'no-crossing'
-      ? '<path d="M-17 24V5Q-17 -7 -4 -7H19m-13 -12 13 12 -13 12" fill="none" stroke="#3c608b" stroke-width="8" stroke-linejoin="round"/>'
-      : '<path d="M-13 24V-8a13 13 0 0 1 26 0V15m-9 -10 9 10 9 -10" fill="none" stroke="#3c608b" stroke-width="7" stroke-linejoin="round"/>';
-    symbol = `<circle r="38" fill="${C.white}" stroke="${C.red}" stroke-width="8"/>${inner}<path d="M-26 27L26 -27" stroke="${C.red}" stroke-width="8"/>`;
-  }
+  else symbol = vehicleProhibitionSign(type);
   return `<g data-sign="${type}" transform="translate(${x} ${y})"><path d="M0 33v${poleLength}" stroke="#839c8c" stroke-width="7"/>${symbol}</g>`;
 }
 

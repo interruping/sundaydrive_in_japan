@@ -1,4 +1,5 @@
 /* Original, self-contained road illustrations. The coral car is the learner. */
+import { vehicleProhibitionSign } from './traffic-signs.js';
 const C = { ink: '#173e38', teal: '#347b69', sage: '#e9f0e9', grass: '#d6e3ce', road: '#b8c7bc', white: '#fffef7', coral: '#e67855', blue: '#bad6df', red: '#d95748', yellow: '#efbd4d' };
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const txt = (x, y, value, size = 18, fill = C.ink, extra = '') => `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-weight="700" ${extra}>${esc(value)}</text>`;
@@ -65,7 +66,7 @@ function sign(type, x = 105, y = 85, scale = 1) {
   } else if (type === 'no-parking' || type === 'no-stopping') {
     symbol = `<circle r="38" fill="#4e85ab" stroke="${C.red}" stroke-width="9"/><path d="M-27 -27l54 54${type === 'no-stopping' ? 'M27 -27l-54 54' : ''}" stroke="${C.red}" stroke-width="8"/>`;
   } else if (type === 'no-uturn') {
-    symbol = `<circle r="38" fill="${C.white}" stroke="${C.red}" stroke-width="9"/><path d="M-13 23V-7a13 13 0 0 1 26 0v16M5 2l8 9 8 -9" fill="none" stroke="#38577b" stroke-width="6"/><path d="M-27 27l54 -54" stroke="${C.red}" stroke-width="8"/>`;
+    symbol = vehicleProhibitionSign(type, 42.5);
   } else if (type === 'etc') {
     symbol = `<rect x="-53" y="-29" width="106" height="58" rx="6" fill="#756490"/>${txt(0, 8, 'ETC', 30, C.white, 'text-anchor="middle"')}`;
   }
