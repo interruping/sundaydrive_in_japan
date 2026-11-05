@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { QUESTIONS } from '../dist/questions.js';
+import { QUESTIONS, RETIRED_QUESTIONS } from '../dist/questions.js';
 
 const scene = (id, mobile = false) => readFile(new URL(`../dist/scenes/${id}${mobile ? '.mobile' : ''}.svg`, import.meta.url), 'utf8');
 const count = (svg, attribute) => svg.split(attribute).length - 1;
 
 test('every question has a separate valid-looking asset and exactly one directly identified own car', async () => {
-  for (const q of QUESTIONS) for (const mobile of [false, true]) {
+  for (const q of [...QUESTIONS, ...RETIRED_QUESTIONS]) for (const mobile of [false, true]) {
     const svg = await scene(q.id, mobile);
     assert.match(svg, /^<svg /);
     assert.ok(svg.includes(`data-question-id="${q.id}"`));
@@ -15,6 +15,22 @@ test('every question has a separate valid-looking asset and exactly one directly
     assert.ok(svg.includes('내 차'), q.id);
     assert.ok(!svg.includes('undefined'), q.id);
     assert.ok(!svg.includes('<script'), q.id);
+  }
+});
+
+test('the replacement entry scenario shows a stopped van, approaching bike and crossing entry path', async () => {
+  assert.ok(!QUESTIONS.some(q => q.id === 'entry-04'));
+  for (const mobile of [false, true]) {
+    const svg = await scene('entry-13', mobile);
+    assert.match(svg, /data-vehicle-role="yielding" data-vehicle-state="stopped"/);
+    assert.match(svg, /data-vehicle-role="motorcycle" data-vehicle-state="approaching"/);
+    assert.match(svg, /data-travel-direction="toward-viewer"/);
+    assert.match(svg, /data-driveway="right"/);
+    assert.match(svg, /data-intended-route="right"/);
+    assert.match(svg, /data-motorcycle-route="straight"/);
+    assert.equal(count(svg, 'data-vehicle-role="'), 3);
+    assert.doesNotMatch(svg, /data-sign=|data-signal-type=/);
+    for (const role of ['내 차', '양보한 차', '오토바이']) assert.ok(svg.includes(role));
   }
 });
 

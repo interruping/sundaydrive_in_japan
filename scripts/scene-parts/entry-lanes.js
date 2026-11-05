@@ -88,6 +88,7 @@ function store(x, y, width = 120, caption = '목적지') {
 }
 
 export function entryScene(s, description = '') {
+  if (s.feature === 'yielding-blindspot') return yieldingEntryScene(s, description);
   const variant = typeof s.variant === 'number' ? s.variant : String(s.variant || '').split('').reduce((n, c) => n + c.charCodeAt(0), 0);
   const offset = (variant % 3 - 1) * 8, left = 187 + offset, center = left + 78, right = left + 156;
   const ownX = left + 39, oppositeX = center + 39;
@@ -141,6 +142,20 @@ export function entryScene(s, description = '') {
       : label(14, 348, '내 차', ownX - 24, 365, 'left'));
   }
   return svg(s, description, out);
+}
+
+function yieldingEntryScene(s, description) {
+  // A stopped opposing van obscures the motorcycle coming along its left
+  // side (the viewer's right). The driveway stays beyond both vehicle paths.
+  let out = `<g data-road-layout="two-way-two-lane" data-center-line="yellow" data-has-sidewalk="false"><rect x="170" width="220" height="520" fill="${C.road}"/>${line('M280 0V520', C.yellow, 5, 'data-centerline="yellow-solid"')}${line('M173 0V520M387 0V330M387 410V520')}</g>`;
+  out += `<g data-driveway="right"><rect x="410" y="310" width="143" height="170" rx="6" fill="#d1d5c6"/><rect x="390" y="330" width="163" height="80" fill="#c9cfc1"/>${line('M390 330H553M390 410H553', '#a9b7a6', 2)}${store(423, 239, 112)}<path d="M425 423v36h48v-36m12 0v36h48v-36" fill="none" stroke="${C.white}" stroke-width="3"/></g>`;
+  out += `<g data-intended-route="right" data-route-style="not-road-marking">${line('M225 420V392Q225 370 250 370H473', C.coral, 4, 'stroke-dasharray="9 8"')}${arrow(474, 370, 'right', C.coral, .65)}</g>`;
+  out += `<g data-vehicle-role="yielding" data-vehicle-state="stopped" data-car-x="318" data-car-y="240" transform="translate(318 240) rotate(180)"><rect x="-29" y="-53" width="60" height="115" rx="12" fill="${C.ink}" opacity=".14"/><path d="M-29 -35v22m58 -22v22m-58 43v15m58 -15v15" stroke="${C.ink}" stroke-width="6"/><rect x="-27" y="-56" width="54" height="112" rx="11" fill="${C.blue}"/><path d="M-21 -40h42l-3 24h-36Z" fill="#355b59"/><rect x="-20" y="-8" width="40" height="49" rx="6" fill="#d8e7e9"/><path d="M-20 -49h10m20 0h10" stroke="#fff6cf" stroke-width="5"/></g>`;
+  out += label(15, 222, '양보한 차', 287, 240, 'left');
+  out += `<g data-vehicle-role="motorcycle" data-vehicle-state="approaching" data-car-x="370" data-car-y="230" data-travel-direction="toward-viewer" transform="translate(370 230)"><ellipse cy="5" rx="15" ry="31" fill="${C.ink}" opacity=".12"/><rect x="-5" y="-28" width="10" height="16" rx="4" fill="${C.ink}"/><rect x="-5" y="15" width="10" height="17" rx="4" fill="${C.ink}"/><path d="M-9 -18Q0 -25 9 -18L10 16Q0 23 -10 16Z" fill="#487e78"/><path d="M-13 11H13" stroke="${C.ink}" stroke-width="4" stroke-linecap="round"/><path d="M-8 2L-12 11M8 2L12 11" stroke="#355b59" stroke-width="4"/><ellipse cy="-5" rx="8" ry="12" fill="#355b59"/><circle cy="6" r="8" fill="#f1ead4"/><path d="M-6 9H6" stroke="#355b59" stroke-width="3"/></g>`;
+  out += label(409, 80, '오토바이', 383, 230) + `<g data-motorcycle-route="straight">${line('M370 266V313', C.teal, 3, 'stroke-dasharray="6 5"')}${arrow(370, 310, 'straight', C.teal, -.5)}</g>`;
+  out += car(225, 460) + label(20, 443, '내 차', 201, 460, 'left');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 520" role="img" aria-labelledby="scene-title" data-scenario-feature="${s.feature}"><title id="scene-title">${esc(description)}</title><rect width="560" height="520" rx="18" fill="${C.grass}"/>${out}</svg>`;
 }
 
 export function laneScene(s, description = '') {

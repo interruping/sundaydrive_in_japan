@@ -1,4 +1,4 @@
-import { BANK_VERSION, COMPATIBLE_BANK_VERSIONS, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID } from './questions.js';
+import { BANK_VERSION, COMPATIBLE_BANK_VERSIONS, EXAM_QUOTAS, QUESTIONS, QUESTION_BY_ID, QUESTION_REPLACEMENTS } from './questions.js';
 
 export const EXAM_LENGTH = 25;
 export const PASS_SCORE = 90;
@@ -125,7 +125,22 @@ export function restoreState(raw) {
     if (state.screen === 'result' && state.attempt.index !== state.attempt.items.length) return freshState();
     const correctReviewIndex = state.correctReviewIndex ?? 0;
     if (state.screen === 'correct-review' && (state.attempt.index !== state.attempt.items.length || !Number.isInteger(correctReviewIndex) || correctReviewIndex < 0 || correctReviewIndex >= correctAnswers(state.attempt).length)) return freshState();
-    return { version: 1, bankVersion: BANK_VERSION, screen: state.screen, attempt: state.attempt, lastExam: state.lastExam, correctReviewIndex: state.screen === 'correct-review' ? correctReviewIndex : 0 };
+    // Preserve answered questions and completed/review attempts. Replace only
+    // unattempted exam questions, without changing order, count or prior score.
+    let attempt = state.attempt;
+    if (attempt?.mode === 'exam') {
+      const used = new Set(attempt.items.map(item => item.id));
+      attempt = { ...attempt, items: attempt.items.map(item => {
+        const preferred = QUESTION_BY_ID.get(QUESTION_REPLACEMENTS[item.id]);
+        if (!preferred || item.answer !== null) return item;
+        const replacement = !used.has(preferred.id) ? preferred : QUESTIONS.find(q => q.category === preferred.category && !used.has(q.id));
+        if (!replacement) return item;
+        used.delete(item.id);
+        used.add(replacement.id);
+        return { ...item, id: replacement.id };
+      }) };
+    }
+    return { version: 1, bankVersion: BANK_VERSION, screen: state.screen, attempt, lastExam: state.lastExam, correctReviewIndex: state.screen === 'correct-review' ? correctReviewIndex : 0 };
   } catch {
     return freshState();
   }

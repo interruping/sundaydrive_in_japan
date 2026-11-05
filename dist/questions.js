@@ -1,8 +1,8 @@
 // Original scenario questions, checked against the sources below on 2026-11-05.
-export const BANK_VERSION = '2026-11-05.1';
-// Added questions preserve existing IDs and answer positions. Keep saved exams
-// and both kinds of review; expanded category quotas apply to new exams only.
-export const COMPATIBLE_BANK_VERSIONS = ['2026-11-04.4', '2026-11-04.5'];
+export const BANK_VERSION = '2026-11-05.2';
+// Retired questions remain available for answered history. Only unanswered
+// exam slots are replaced, so scores and review keep their original meaning.
+export const COMPATIBLE_BANK_VERSIONS = ['2026-11-04.4', '2026-11-04.5', '2026-11-05.1'];
 export const SOURCES = {
   signals: { name: '일본 경찰청 · 신호와 도로표지', url: 'https://www.npa.go.jp/english/bureau/traffic/traffic-light_english.pdf' },
   rules: { name: '일본 경찰청 · 교통 안전 교칙', url: 'https://www.npa.go.jp/bureau/traffic/20241113kyousoku.pdf' },
@@ -29,6 +29,7 @@ export const SOURCES = {
   rentalDamage: { name: '일본 국민생활센터 · 작은 렌터카 흠집도 연락', url: 'https://www.kokusen.go.jp/news/data/n-20250328_1.html' },
   accident: { name: '홋카이도 · 사고 시 구호와 119·110 신고', url: 'https://www.pref.hokkaido.lg.jp/ks/cak/kat/safety-drive/accident.html' },
   controls: { name: '토요타 · 출발 전 방향지시등과 와이퍼 확인', url: 'https://toyota.jp/after_service/tenken/daily/step3/detail/' },
+  yieldingBlindspot: { name: 'JAF Mate · 양보한 차 옆의 이륜차 사고', url: 'https://jafmate.jp/safety/kantei_20261016.html' },
 };
 export const CATEGORIES = {
   signals: '복합 신호와 내비', turns: '우회전과 정지 위치', entry: '중앙선과 목적지 진입',
@@ -47,7 +48,7 @@ const q = (id, category, prompt, choices, answer, explanation, source, scene) =>
     scene.kind === 'deep-intersection' && `넓고 어긋난 교차로. 진입 전 정지선 A와 교차로 깊숙한 우회전 대기 표시 B 사이에 여러 대 길이의 진입 구간이 있음. 내 차는 ${{ 'before-entry': 'A 정지선 이전', 'early-inside': 'A를 지난 뒤 B에 한참 못 미친 교차로 안', 'at-waiting': '교차로 깊숙한 B 앞' }[scene.stage]}`,
     scene.kind === 'deep-intersection' && (scene.waitingQueue ? 'B부터 진입 횡단보도까지 우회전 대기 차량이 이어져 내 차가 들어갈 공간 없음' : scene.exitBlocked ? '우회전한 뒤 출구에 대기 차량이 꽉 차 있음' : scene.oncoming ? `맞은편 차량이 ${scene.otherRoute === 'left' ? '좌회전하려고' : '직진하며'} 접근 중` : scene.pedestrian ? '우회전 출구의 횡단보도를 보행자가 횡단 중' : '진행할 경로에 다른 차나 보행자 없음'),
     scene.kind === 'entry' && `${scene.centerLine === 'yellow' ? '황색 실선' : '흰 점선'} 중앙선의 왕복 2차로. 목적지는 ${scene.destinationSide === 'left' ? '왼쪽' : '오른쪽'}`,
-    scene.kind === 'entry' && `${scene.sidewalk ? '입구를 가로지르는 인도 있음' : '입구에 인도 없음'}. ${scene.oncoming ? '맞은편 차량 접근 중' : '접근하는 맞은편 차량 없음'}`,
+    scene.kind === 'entry' && `${scene.sidewalk ? '입구를 가로지르는 인도 있음' : '입구에 인도 없음'}. ${scene.feature === 'yielding-blindspot' ? '맞은편 차는 멈춰 양보하고, 그 차 옆의 오토바이는 접근 중' : scene.oncoming ? '맞은편 차량 접근 중' : '접근하는 맞은편 차량 없음'}`,
     scene.sign && ({ 'no-crossing': '차량 횡단금지 표지', 'no-entry': '진입금지 표지', 'no-uturn': '유턴 금지 표지', 'left-allowed': '흰 바탕의 파란 왼쪽 화살표', 'one-way-left': '파란 바탕의 흰 왼쪽 화살표' })[scene.sign],
     scene.kind === 'priority' && ({ 'equal-junction': '같은 폭 도로, 신호와 우선도로 표시 없음. 왼쪽 차 접근', 'wider-road': '나는 좁은 도로, 오른쪽 차량은 더 넓은 도로', 'priority-centerline': '내 도로가 더 넓지만 좁은 교차도로의 중앙선만 교차로 안을 관통함', 'occluded-crosswalk': '신호 없는 횡단보도, 같은 방향 옆 차가 횡단보도 앞에 정지해 시야를 가림', 'sidewalk-exit': '내 차가 주차장 안에서 비어 있는 인도에 접근', 'bus-departure': '노선버스의 오른쪽 출발 방향지시등 켜짐. 내 차는 충분히 뒤에 있음', 'roundabout-yield': '법정 회전교차로, 이미 시계 방향으로 회전 중인 차량 있음', 'roundabout-route': '법정 회전교차로, 시계 방향 흐름, 오른쪽 세 번째 출구가 목적지' })[scene.feature],
   ].filter(Boolean).join('. '),
@@ -143,9 +144,9 @@ export const QUESTIONS = [
   q('entry-03', 'entry', '오른쪽 목적지 앞에 이 표지가 있어요.',
     ['추월만 아니면 오른쪽 가게로 들어가요', '여기서 횡단하지 않고 다른 진입로를 찾아요'], 1,
     '차량 횡단금지 표지는 반대 차로를 가로질러 오른쪽 시설로 들어가는 것도 금지해요. 황색 중앙선만 있는 경우와 달라요.', 'noCrossing', entry({ sign: 'no-crossing' })),
-  q('entry-04', 'entry', '이 표지가 있는 도로에서 왼쪽 가게로 들어갈까요?',
-    ['주변을 확인하고 서행해 왼쪽 입구로 들어가요', '표지가 있으니 왼쪽 가게에도 들어갈 수 없어요'], 0,
-    '이 표지는 ‘차량 횡단금지’로, 도로를 가로질러 반대편 시설로 드나드는 등의 횡단을 금지해요. 왼쪽 시설로 드나드는 좌회전은 이 규제에서 제외돼요. 그림의 가게는 내 차로와 같은 쪽에 있어 중앙선을 넘을 필요가 없으므로, 보행자와 자전거 등 주변을 확인하고 천천히 들어가요.', 'noCrossing', entry({ sign: 'no-crossing', destinationSide: 'left' })),
+  q('entry-13', 'entry', '맞은편 차가 양보해 줬어요. 오른쪽 가게로 들어갈까요?',
+    ['차 옆으로 오는 오토바이를 먼저 보내요', '맞은편 차가 멈췄으니 바로 우회전해요'], 0,
+    '양보한 차 한 대가 멈췄다고 반대 차로 전체가 비어 있는 것은 아니에요. 그림에서는 그 차 옆으로 오토바이가 다가와 내 진입 경로를 지나게 돼요. 우회전을 시작하지 말고 오토바이를 먼저 보낸 뒤, 가려진 곳까지 다시 확인해요. 양보를 받아 서둘러 돌다가 이륜차와 충돌하는 상황을 일본에서는 ‘サンキュー事故’라고 불러요.', ['yieldingBlindspot', 'law'], entry({ feature: 'yielding-blindspot', label: '오른쪽 가게 입구. 맞은편 차는 정차해 양보 중이며, 그 차의 도로 가장자리 쪽으로 오토바이가 직진해 옴. 산호색 점선은 내 차가 진입하려는 경로.' })),
   q('entry-05', 'entry', '맞은편은 비었어요. 가게 입구의 인도를 지날 때는요?',
     ['사람이 없으니 서행만 해요', '인도 직전에 일시정지하고 확인해요'], 1,
     '도로 밖 시설로 들어가며 인도를 가로지를 때는 사람이 보이지 않아도 인도 직전에 일시정지해요.', 'rules', entry({ sidewalk: true })),
@@ -289,4 +290,11 @@ export const QUESTIONS = [
     ['와이퍼 그림이 있는 A 레버예요', '좌우 화살표가 있는 B 레버예요'], 1,
     '그림의 A는 와이퍼, B는 방향지시등 레버예요. 한국에서 쓰던 손의 위치만 기억해 조작하면 와이퍼가 켜질 수 있어요. 레버의 위치와 조작 방식은 차종에 따라 다를 수 있으므로 출발 전 정차 상태에서 확인해요.', 'controls', supplement('parked-controls', { label: '내 차 운전석 확대. P단, 속도 0. 왼쪽 A에는 와이퍼 그림, 오른쪽 B에는 좌우 화살표.' })),
 ];
-export const QUESTION_BY_ID = new Map(QUESTIONS.map(question => [question.id, question]));
+// Keep the exact original prompt, choices and artwork for completed answers.
+export const RETIRED_QUESTIONS = [
+  q('entry-04', 'entry', '이 표지가 있는 도로에서 왼쪽 가게로 들어갈까요?',
+    ['주변을 확인하고 서행해 왼쪽 입구로 들어가요', '표지가 있으니 왼쪽 가게에도 들어갈 수 없어요'], 0,
+    '이 표지는 ‘차량 횡단금지’로, 도로를 가로질러 반대편 시설로 드나드는 등의 횡단을 금지해요. 왼쪽 시설로 드나드는 좌회전은 이 규제에서 제외돼요. 그림의 가게는 내 차로와 같은 쪽에 있어 중앙선을 넘을 필요가 없으므로, 보행자와 자전거 등 주변을 확인하고 천천히 들어가요.', 'noCrossing', entry({ sign: 'no-crossing', destinationSide: 'left' })),
+];
+export const QUESTION_REPLACEMENTS = { 'entry-04': 'entry-13' };
+export const QUESTION_BY_ID = new Map([...QUESTIONS, ...RETIRED_QUESTIONS].map(question => [question.id, question]));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { QUESTIONS, QUESTION_BY_ID, CATEGORIES, SOURCES, EXAM_QUOTAS } from '../dist/questions.js';
+import { QUESTIONS, RETIRED_QUESTIONS, QUESTION_BY_ID, CATEGORIES, SOURCES, EXAM_QUOTAS } from '../dist/questions.js';
 import { EXAM_LENGTH, REQUIRED_TOPICS, createExam, createReview, correctAnswers, answerCurrent, nextQuestion, scoreAttempt, isValidAttempt, freshState, restoreState } from '../dist/engine.js';
 
 function complete(attempt, rightCount) {
@@ -14,7 +14,8 @@ function complete(attempt, rightCount) {
 
 test('the expanded bank has unique scenarios, two choices, pictures and primary sources', () => {
   assert.ok(QUESTIONS.length > 60);
-  assert.equal(QUESTION_BY_ID.size, QUESTIONS.length);
+  assert.equal(QUESTION_BY_ID.size, QUESTIONS.length + RETIRED_QUESTIONS.length);
+  assert.ok(RETIRED_QUESTIONS.every(retired => !QUESTIONS.some(active => active.id === retired.id)));
   assert.equal(new Set(QUESTIONS.map(q => q.prompt)).size, QUESTIONS.length);
   for (const q of QUESTIONS) {
     assert.ok(CATEGORIES[q.category]);
@@ -47,13 +48,40 @@ test('adding categories preserves a 60-question-bank exam and its correct-answer
   const inProgress = nextQuestion(answerCurrent(attempt, QUESTION_BY_ID.get(ids[0]).answer));
   const saved = { ...freshState(), bankVersion: '2026-11-04.5', screen: 'quiz', attempt: inProgress };
   const restored = restoreState(JSON.stringify(saved));
-  assert.deepEqual(restored.attempt, inProgress);
+  assert.deepEqual(restored.attempt, { ...inProgress, items: inProgress.items.map(item => item.id === 'entry-04' ? { ...item, id: 'entry-13' } : item) });
   const finished = complete(attempt, 18);
   const review = { ...saved, screen: 'correct-review', attempt: finished, lastExam: finished, correctReviewIndex: 6 };
   const restoredReview = restoreState(JSON.stringify(review));
   assert.deepEqual(restoredReview.attempt, finished);
   assert.equal(restoredReview.correctReviewIndex, 6);
   assert.equal(scoreAttempt(restoredReview.attempt).score, 90);
+});
+
+test('retiring a question replaces only unanswered exam slots and preserves answered history', () => {
+  const ids = QUESTIONS.filter(q => q.id !== 'entry-13').slice(0, 24).map(q => q.id);
+  ids.splice(22, 0, 'entry-04');
+  const attempt = { mode: 'exam', index: 22, items: ids.map((id, i) => ({ id, order: [1, 0], answer: i < 22 ? QUESTION_BY_ID.get(id).answer : null })) };
+  const previous = { ...freshState(), bankVersion: '2026-11-05.1', screen: 'quiz', attempt };
+  const restored = restoreState(JSON.stringify(previous));
+  assert.equal(restored.attempt.items[22].id, 'entry-13');
+  assert.deepEqual(restored.attempt.items[22].order, [1, 0]);
+  assert.deepEqual(restored.attempt.items.slice(0, 22), attempt.items.slice(0, 22));
+  assert.equal(restored.attempt.index, 22);
+  assert.equal(restored.attempt.items.length, 25);
+  assert.deepEqual(restoreState(JSON.stringify(restored)), restored);
+  for (const answer of [0, 1]) {
+    const answered = structuredClone(previous);
+    answered.attempt.items[22].answer = answer;
+    assert.deepEqual(restoreState(JSON.stringify(answered)).attempt, answered.attempt);
+  }
+  const oldReview = { mode: 'review', index: 0, items: [{ id: 'entry-04', order: [0, 1], answer: null }] };
+  assert.deepEqual(restoreState(JSON.stringify({ ...previous, attempt: oldReview })).attempt, oldReview);
+  const duplicate = structuredClone(previous);
+  duplicate.attempt.items[24].id = 'entry-13';
+  const unique = restoreState(JSON.stringify(duplicate)).attempt;
+  assert.equal(new Set(unique.items.map(item => item.id)).size, 25);
+  assert.ok(unique.items.every(item => item.id !== 'entry-04'));
+  assert.equal(QUESTION_BY_ID.get(unique.items[22].id).category, 'entry');
 });
 
 test('exam draws 25 unique questions covering every category and shuffles answer positions', () => {

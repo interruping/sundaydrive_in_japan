@@ -160,6 +160,41 @@ try {
   }
   console.log('PASS zero, one, and all-correct result handling');
 
+  // Reproduce the reported 23/25 screen: change an unanswered retired question
+  // while keeping the first 22 answers and the original completed-review data.
+  const replacementIds = QUESTIONS.filter(q => q.id !== 'entry-13').slice(0, 24).map(q => q.id);
+  replacementIds.splice(22, 0, 'entry-04');
+  const replacedAttempt = { mode: 'exam', index: 22, items: replacementIds.map((id, i) => ({ id, order: [0, 1], answer: i < 22 ? QUESTION_BY_ID.get(id).answer : null })) };
+  await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: { ...freshState(), bankVersion: '2026-11-05.1', screen: 'quiz', attempt: replacedAttempt } });
+  await page.reload();
+  assert.equal(await page.locator('h1').textContent(), QUESTION_BY_ID.get('entry-13').prompt);
+  assert.match(await page.locator('.question-count strong').textContent(), /23\s*\/\s*25/);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+    await assertNoOverflow();
+    await page.locator('.scene-art').evaluate(img => img.decode());
+    await screenshot(`entry-13-${width}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('[data-action="answer"][data-choice="0"]').click();
+  assert.equal((await state()).attempt.items[22].id, 'entry-13');
+  assert.deepEqual((await state()).attempt.items.slice(0, 22), replacedAttempt.items.slice(0, 22));
+  await screenshot('entry-13-feedback-mobile');
+  await click('next');
+  await finishWith(23);
+  assert.equal(await page.locator('.score strong').textContent(), '92');
+  const historical = structuredClone(replacedAttempt);
+  historical.items.forEach(item => { item.answer = QUESTION_BY_ID.get(item.id).answer; });
+  historical.index = historical.items.length;
+  await page.evaluate(({ key, saved }) => localStorage.setItem(key, JSON.stringify(saved)), { key: STORAGE_KEY, saved: { ...freshState(), bankVersion: '2026-11-05.1', screen: 'correct-review', attempt: historical, lastExam: historical, correctReviewIndex: 22 } });
+  await page.reload();
+  assert.equal(await page.locator('h1').textContent(), QUESTION_BY_ID.get('entry-04').prompt);
+  await click('correct-return');
+  assert.equal(await page.locator('.score strong').textContent(), '100');
+  await click('retry');
+  assert.ok((await state()).attempt.items.every(item => item.id !== 'entry-04'));
+  console.log('PASS unanswered 23/25 replacement, old answers and scores, and retirement from new exams');
+
   // Existing 20-question progress keeps its own total and five-point scoring.
   const legacy = createExam();
   legacy.items = legacy.items.slice(0, 20);
